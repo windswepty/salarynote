@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>월급 실수령액 계산기 2026 | 샐러리노트</title>
+<meta name="description" content="세전 월급으로 실수령액을 바로 계산합니다. 2026년 4대보험 요율과 국세청 근로소득 간이세액표 원본을 적용하고 계산 근거를 공개합니다.">
+<link rel="canonical" href="__BASE_URL__/monthly-salary/">
+<meta property="og:title" content="월급 실수령액 계산기 2026 | 샐러리노트">
+<meta property="og:type" content="website"><meta property="og:locale" content="ko_KR">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="brand" href="/">샐러리노트</a>
+  <nav class="nav">
+    <a href="/">연봉<span class="bar"></span></a>
+    <a href="/monthly-salary/" aria-current="page">월급<span class="bar"></span></a>
+    <a href="/four-insurance/">4대보험<span class="bar"></span></a>
+  </nav>
+  <div class="ptitle">
+  <h1>월급 실수령액 계산기</h1>
+  <p class="sub">세전 월급을 넣으면 4대보험과 세금을 뺀 실수령액을 계산합니다.</p>
+  </div>
+</header>
+
+<main class="content">
+
+<div class="card">
+  <div class="field">
+    <label for="salary">세전 월급 <span class="hint">(월 총지급액, 원)</span></label>
+    <input id="salary" type="text" inputmode="numeric" autocomplete="off" value="3,500,000">
+  </div>
+  <div class="row">
+    <div class="field">
+      <label for="dep">부양가족 수 <span class="hint">(본인 포함)</span></label>
+      <input id="dep" type="number" min="1" max="20" step="1" value="1">
+    </div>
+    <div class="field">
+      <label for="nt">월 비과세액 <span class="hint">(식대 등)</span></label>
+      <input id="nt" type="text" inputmode="numeric" autocomplete="off" value="200,000">
+    </div>
+  </div>
+  <details>
+    <summary>상세 설정</summary>
+    <div class="body">
+      <div class="field" style="margin-top:10px">
+        <label for="paydate">급여 지급일</label>
+        <input id="paydate" type="date">
+      </div>
+      <p>국민연금 기준소득월액 상·하한액은 매년 <b>7월 1일</b>에 바뀌므로 지급일에 따라 고소득 구간 결과가 달라집니다.</p>
+    </div>
+  </details>
+</div>
+
+<div id="notices"></div>
+
+<div class="card result">
+  <div class="cap">월 실수령액</div>
+  <div class="big" id="net">—</div>
+  <div class="side" id="side"></div>
+</div>
+
+<div class="card">
+  <table><tbody id="breakdown"></tbody></table>
+  <details id="basisBox"><summary>계산 근거 보기</summary><div class="body"><ul id="basis"></ul></div></details>
+</div>
+
+<div class="ad"></div>
+
+<div class="card prose">
+  <h2>세전 월급과 실수령액의 차이</h2>
+  <p>세전 월급에서 국민연금·건강보험·장기요양보험·고용보험의 <b>근로자 부담분</b>과 소득세·지방소득세가 빠지면 실수령액이 됩니다. 회사가 부담하는 몫과 산재보험은 근로자 급여에서 공제되지 않으므로 이 계산에 포함되지 않습니다.</p>
+  <h2>비과세액을 빼는 이유</h2>
+  <p>식대 등 비과세 항목은 소득세 계산 기준에서 제외됩니다. 2026년 기준 식대는 월 20만원까지 비과세이며 기본값으로 넣어두었습니다. 비과세가 없으면 0으로 바꾸세요.</p>
+</div>
+
+</main>
+
+<footer>
+  <p>2026년 기준 · 국민연금 9.5%, 건강보험 7.19%, 장기요양 13.14%, 고용보험 1.8% 적용</p>
+  <p>근거: 소득세법 시행령 별표2(2026.2.27 개정). 참고용이며 법적 효력은 없습니다.</p>
+</footer>
+</div>
+<script src="/assets/engine.js"></script>
+<script src="/assets/app.js"></script>
+<script src="/assets/calc-page.js"></script>
+<script src="/assets/nav-transition.js"></script>
+<script>window.SN_PAGE({ mode: "monthly" });</script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>연봉 실수령액 계산기 2026 | 샐러리노트</title>
+<meta name="description" content="2026년 기준 연봉 실수령액을 계산합니다. 국세청 근로소득 간이세액표 원본과 2026년 4대보험 요율을 그대로 적용하고, 계산 근거를 항목별로 보여줍니다.">
+<link rel="canonical" href="__BASE_URL__/">
+<meta property="og:title" content="연봉 실수령액 계산기 2026 | 샐러리노트">
+<meta property="og:description" content="국세청 간이세액표 원본을 그대로 적용한 실수령액 계산기. 계산 근거까지 공개합니다.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ko_KR">
+<link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"샐러리노트 연봉 실수령액 계산기",
+"applicationCategory":"FinanceApplication","operatingSystem":"All","inLanguage":"ko",
+"offers":{"@type":"Offer","price":"0","priceCurrency":"KRW"},
+"description":"2026년 기준 연봉 실수령액 계산기. 국세청 근로소득 간이세액표와 4대보험 요율을 적용합니다."}
+</script>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="brand" href="/">샐러리노트</a>
+  <nav class="nav">
+    <a href="/" aria-current="page">연봉<span class="bar"></span></a>
+    <a href="/monthly-salary/">월급<span class="bar"></span></a>
+    <a href="/four-insurance/">4대보험<span class="bar"></span></a>
+  </nav>
+  <div class="ptitle">
+  <h1>연봉 실수령액 계산기</h1>
+  <p class="sub">2026년 4대보험 요율과 국세청 근로소득 간이세액표를 적용합니다.</p>
+  </div>
+</header>
+
+<main class="content">
+
+<div class="card">
+  <div class="field">
+    <label for="salary">연봉 <span class="hint">(세전, 원)</span></label>
+    <input id="salary" type="text" inputmode="numeric" autocomplete="off" value="42,000,000">
+  </div>
+  <div class="row">
+    <div class="field">
+      <label for="dep">부양가족 수 <span class="hint">(본인 포함)</span></label>
+      <input id="dep" type="number" min="1" max="20" step="1" value="1">
+    </div>
+    <div class="field">
+      <label for="nt">월 비과세액 <span class="hint">(식대 등)</span></label>
+      <input id="nt" type="text" inputmode="numeric" autocomplete="off" value="200,000">
+    </div>
+  </div>
+  <details>
+    <summary>상세 설정</summary>
+    <div class="body">
+      <div class="row" style="margin-top:10px">
+        <div class="field">
+          <label for="months">연봉 나누는 개월 수</label>
+          <select id="months"><option value="12">12개월 (퇴직금 별도)</option><option value="13">13개월 (퇴직금 포함 계약)</option></select>
+        </div>
+        <div class="field">
+          <label for="paydate">급여 지급일</label>
+          <input id="paydate" type="date">
+        </div>
+      </div>
+      <p>국민연금 기준소득월액 상·하한액은 매년 <b>7월 1일</b>에 바뀝니다. 그래서 지급일에 따라 고소득 구간의 계산 결과가 달라집니다.</p>
+    </div>
+  </details>
+</div>
+
+<div id="notices"></div>
+
+<div class="card result">
+  <div class="cap">월 실수령액</div>
+  <div class="big" id="net">—</div>
+  <div class="side" id="side"></div>
+</div>
+
+<div class="card">
+  <table>
+    <tbody id="breakdown"></tbody>
+  </table>
+  <details id="basisBox">
+    <summary>계산 근거 보기</summary>
+    <div class="body"><ul id="basis"></ul></div>
+  </details>
+</div>
+
+<div class="ad"></div>
+
+<div class="card prose">
+  <h2>실수령액은 어떻게 계산되나요</h2>
+  <p>세전 급여에서 <b>4대보험 근로자 부담분</b>과 <b>소득세·지방소득세</b>를 빼면 실수령액이 됩니다. 이 계산기는 2026년 기준으로 국민연금 4.75%, 건강보험 3.595%, 장기요양보험(건강보험료의 13.14%), 고용보험 0.9%를 적용합니다.</p>
+  <p>소득세는 국세청이 정한 <b>근로소득 간이세액표</b>를 그대로 조회합니다. 근사식으로 추정하지 않고 소득세법 시행령 별표2의 646개 구간 원본을 사용하므로, 급여명세서의 원천징수액과 일치합니다.</p>
+
+  <h2>비과세액은 왜 따로 넣나요</h2>
+  <p>식대처럼 비과세로 처리되는 금액은 소득세 계산에서 제외됩니다. 2026년 기준 식대는 월 20만원까지 비과세이며, 기본값으로 넣어두었습니다. 비과세가 없는 회사라면 0으로 바꾸세요.</p>
+
+  <h2>계산 결과가 실제 급여명세서와 다를 수 있나요</h2>
+  <p>회사가 원천징수 비율을 80% 또는 120%로 선택했거나, 중도 입사·상여금·연말정산 환급이 반영된 달이라면 차이가 날 수 있습니다. 또한 이 계산은 <b>매월 원천징수액</b> 기준이며, 최종 세액은 연말정산에서 정산됩니다.</p>
+</div>
+
+</main>
+
+<footer>
+  <p>2026년 기준 · 국민연금 9.5%, 건강보험 7.19%, 장기요양 13.14%, 고용보험 1.8% 적용</p>
+  <p>근거: 소득세법 시행령 별표2(2026.2.27 개정), 보건복지부·고용노동부 고시. 참고용이며 법적 효력은 없습니다.</p>
+</footer>
+</div>
+
+<script src="/assets/engine.js"></script>
+<script src="/assets/app.js"></script>
+<script src="/assets/calc-page.js"></script>
+<script src="/assets/nav-transition.js"></script>
+<script>window.SN_PAGE({ mode: "annual" });</script>
+</body>
+</html>

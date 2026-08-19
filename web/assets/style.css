@@ -1,0 +1,253 @@
+/* ============================================================
+   샐러리노트 디자인 시스템
+   방향: 급여명세서. 카드 중첩·컬러 박스 대신 헤어라인과 여백으로 구획한다.
+   강조색은 상호작용 요소에만 쓰고, 결과 숫자는 색이 아니라 타이포로 세운다.
+   ============================================================ */
+:root {
+  /* 색 — 중성 위주. 강조색은 링크·포커스에만. */
+  --bg:      #ffffff;
+  --surface: #fafbfc;
+  --ink:     #0f1115;
+  --ink-2:   #3d434d;
+  --muted:   #767d89;
+  --line:    #e7e9ed;
+  --line-2:  #d3d7de;
+  --accent:  #1a56db;
+  --accent-w:#eef3fd;
+  --warn:    #8a6d1f;
+  --warn-bg: #fdfaf1;
+  --warn-line:#e8dcb8;
+  --err:     #a32b26;
+  --err-bg:  #fdf5f4;
+  --err-line:#eccbc8;
+
+  /* 간격 — 4px 배수 하나로 통일 */
+  --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+  --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:      #0f1115;
+    --surface: #16191f;
+    --ink:     #eceef2;
+    --ink-2:   #b6bcc7;
+    --muted:   #858c99;
+    --line:    #23272f;
+    --line-2:  #333944;
+    --accent:  #7ba4f5;
+    --accent-w:#151d2c;
+    --warn:    #d8b563;
+    --warn-bg: #1e1b12;
+    --warn-line:#3a3320;
+    --err:     #e79a95;
+    --err-bg:  #201615;
+    --err-line:#3f2926;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+               "Segoe UI", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  font-size: 16px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.wrap { max-width: 640px; margin: 0 auto; padding: 0 var(--s5) var(--s8); }
+@media (max-width: 520px) { .wrap { padding: 0 var(--s4) var(--s7); } }
+
+/* ---------- 헤더 ---------- */
+header { padding: var(--s6) 0 var(--s5); }
+.brand {
+  display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--muted); text-decoration: none;
+}
+.brand:hover { color: var(--ink); }
+h1 {
+  font-size: 27px; font-weight: 700; letter-spacing: -.035em;
+  line-height: 1.25; margin: var(--s4) 0 var(--s2);
+}
+.sub { color: var(--muted); font-size: 14px; margin: 0; word-break: keep-all; }
+
+/* ---------- 구획: 카드가 아니라 헤어라인 ---------- */
+.card { border-top: 1px solid var(--line); padding: var(--s5) 0; margin: 0; }
+.card:first-of-type { border-top: 0; padding-top: 0; }
+
+/* ---------- 입력 ---------- */
+.field { margin-bottom: var(--s4); }
+.field:last-child { margin-bottom: 0; }
+label {
+  display: block; font-size: 13px; font-weight: 600; color: var(--ink-2);
+  margin-bottom: var(--s2); letter-spacing: -.01em;
+}
+.hint { font-weight: 400; color: var(--muted); }
+input, select {
+  width: 100%; padding: 11px var(--s3);
+  font-size: 16px;               /* 16px 미만이면 iOS 가 확대한다 */
+  font-family: inherit; color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line-2); border-radius: 6px;
+  transition: border-color .12s, box-shadow .12s;
+}
+input:hover, select:hover { border-color: var(--muted); }
+input:focus, select:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-w);
+}
+#salary, #base { font-size: 19px; font-weight: 600; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
+@media (max-width: 480px) { .row { grid-template-columns: 1fr; gap: 0; } }
+
+/* ---------- 결과: 색 박스 없이 타이포로 ---------- */
+.result { text-align: left; padding: var(--s5) 0; }
+.result .cap {
+  font-size: 12px; font-weight: 600; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: var(--s2);
+}
+.result .big {
+  font-size: 44px; font-weight: 700; letter-spacing: -.045em; line-height: 1.05;
+  font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.result .big small { font-size: 20px; font-weight: 600; letter-spacing: -.02em; margin-left: 3px; color: var(--ink-2); }
+.result .side { font-size: 13px; color: var(--muted); margin-top: var(--s2); font-variant-numeric: tabular-nums; }
+@media (max-width: 400px) { .result .big { font-size: 36px; } }
+
+/* ---------- 명세표 ---------- */
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { padding: 9px 0; border-bottom: 1px solid var(--line); }
+th { text-align: left; font-weight: 400; color: var(--muted); letter-spacing: -.01em; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-2); letter-spacing: -.01em; }
+tr:last-child th, tr:last-child td { border-bottom: 0; }
+tr.sum th { color: var(--ink); font-weight: 700; }
+tr.sum td { color: var(--ink); font-weight: 700; font-size: 15px; }
+tr.sum th, tr.sum td { border-top: 1.5px solid var(--line-2); border-bottom: 1px solid var(--line); padding-top: 11px; }
+
+/* ---------- 계산 근거 ---------- */
+details { margin-top: var(--s4); }
+details summary {
+  cursor: pointer; font-size: 13px; font-weight: 600; color: var(--accent);
+  list-style: none; padding: var(--s2) 0; user-select: none;
+}
+details summary::-webkit-details-marker { display: none; }
+details summary::before { content: "+ "; font-weight: 400; }
+details[open] summary::before { content: "− "; }
+details .body { font-size: 13px; color: var(--muted); padding: var(--s2) 0 0; }
+details .body ul { padding-left: var(--s4); margin: var(--s2) 0; }
+details .body li { margin: var(--s1) 0; word-break: keep-all; font-variant-numeric: tabular-nums; }
+details .body p { margin: var(--s2) 0 0; word-break: keep-all; }
+details .row { margin-top: var(--s3); }
+
+/* ---------- 알림: 채움 없이 좌측 라인만 ---------- */
+.notice {
+  border-left: 2px solid var(--warn-line); background: var(--warn-bg);
+  color: var(--warn); padding: var(--s3) var(--s4); font-size: 13px;
+  margin-bottom: var(--s2); word-break: keep-all; line-height: 1.55;
+}
+.notice b { display: block; color: var(--ink); margin-bottom: var(--s1); font-size: 13.5px; }
+.notice.err { border-left-color: var(--err-line); background: var(--err-bg); color: var(--err); }
+#notices:not(:empty) { margin: var(--s4) 0 0; }
+
+/* ---------- 다른 계산기 ---------- */
+.links { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
+@media (max-width: 420px) { .links { grid-template-columns: 1fr; } }
+.links a {
+  display: block; padding: var(--s3) var(--s4); border: 1px solid var(--line);
+  border-radius: 6px; text-decoration: none; color: var(--ink);
+  font-size: 14px; font-weight: 600; letter-spacing: -.01em;
+  transition: border-color .12s, background .12s;
+}
+.links a:hover { border-color: var(--line-2); background: var(--surface); }
+.links a span { display: block; font-weight: 400; font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+/* ---------- 설명 글 ---------- */
+.prose { font-size: 14.5px; color: var(--ink-2); line-height: 1.75; word-break: keep-all; }
+.prose h2 {
+  font-size: 15px; font-weight: 700; color: var(--ink);
+  margin: var(--s5) 0 var(--s2); letter-spacing: -.02em;
+}
+.prose h2:first-child { margin-top: 0; }
+.prose p { margin: 0 0 var(--s3); }
+.prose p:last-child { margin-bottom: 0; }
+.prose b { font-weight: 600; color: var(--ink); }
+
+footer {
+  border-top: 1px solid var(--line); margin-top: var(--s6); padding-top: var(--s4);
+  font-size: 12px; color: var(--muted); line-height: 1.7;
+}
+footer p { margin: 0 0 var(--s1); word-break: keep-all; }
+.ad { margin: var(--s5) 0 0; }  /* 애드센스 승인 후 슬롯 삽입 */
+
+/* ============================================================
+   상단 내비게이션 — 버튼 없이 텍스트만.
+   밑줄은 별도 엘리먼트다. 그래야 페이지가 바뀔 때
+   위치를 '이동'시킬 수 있다(::after 로는 불가능).
+   ============================================================ */
+.nav { display: flex; gap: var(--s5); margin-top: var(--s3); font-size: 14px; letter-spacing: -.01em; }
+.nav a {
+  position: relative; color: var(--muted); text-decoration: none;
+  font-weight: 500; padding-bottom: 7px; transition: color .18s ease;
+}
+.nav a:hover { color: var(--ink-2); }
+.nav a[aria-current="page"] { color: var(--ink); font-weight: 600; }
+
+.nav .bar {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 1.5px;
+  border-radius: 1px; background: var(--ink); opacity: 0;
+}
+.nav a[aria-current="page"] .bar {
+  opacity: 1;
+  /* 이 이름 덕분에 브라우저가 이전 페이지의 밑줄 위치에서
+     새 페이지의 밑줄 위치로 '미끄러지듯' 옮겨준다. */
+  view-transition-name: sn-navbar;
+}
+@media (max-width: 420px) { .nav { gap: var(--s4); font-size: 13.5px; } }
+
+/* ============================================================
+   페이지 전환
+   조각을 나눠 각자 다른 타이밍을 준다. 한 덩어리로 묶으면
+   전부 동시에 크로스페이드돼서 '툭' 끊기는 느낌이 난다.
+   ============================================================ */
+@view-transition { navigation: auto; }
+
+.brand   { view-transition-name: sn-brand; }
+.ptitle  { view-transition-name: sn-title; }
+main     { view-transition-name: sn-content; }
+
+/* 브랜드는 고정. 움직이면 시선이 분산된다. */
+::view-transition-old(sn-brand),
+::view-transition-new(sn-brand) { animation: none; }
+
+/* 밑줄: 페이드 없이 위치만 이동시킨다.
+   opacity 를 건드리면 미끄러지는 대신 사라졌다 나타난다. */
+::view-transition-old(sn-navbar),
+::view-transition-new(sn-navbar) { animation: none; opacity: 1; }
+::view-transition-group(sn-navbar) {
+  animation-duration: .38s;
+  animation-timing-function: cubic-bezier(.32, .72, 0, 1);
+}
+
+@keyframes sn-rise { from { opacity: 0; transform: translateY(10px); } }
+@keyframes sn-sink { to   { opacity: 0; transform: translateY(-4px); } }
+
+/* 나가는 화면은 짧게 비우고, 들어오는 화면이 아래에서 올라온다.
+   제목이 먼저, 본문이 조금 늦게 — 이 시차가 '흐르는' 느낌을 만든다. */
+::view-transition-old(sn-title)   { animation: sn-sink .16s ease-in both; }
+::view-transition-new(sn-title)   { animation: sn-rise .42s cubic-bezier(.32,.72,0,1) .04s both; }
+::view-transition-old(sn-content) { animation: sn-sink .16s ease-in both; }
+::view-transition-new(sn-content) { animation: sn-rise .46s cubic-bezier(.32,.72,0,1) .10s both; }
+
+/* 나머지(푸터 등)는 은은하게만. */
+::view-transition-old(root),
+::view-transition-new(root) { animation-duration: .28s; }
+
+/* 시스템의 '애니메이션 최소화' 설정과 무관하게 항상 재생한다.
+   기본값은 이 설정을 존중해 전부 끄는 것이지만, 여기서는 의도적으로 켠다.
+   이동 거리 10px / 0.4초 수준이라 어지러움을 유발하는 강도가 아니고,
+   전환이 없으면 화면이 뚝 끊겨 오히려 읽기 어렵다는 판단이다. */
+
+.result.empty .big { color: var(--line-2); font-weight: 600; }

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4대보험 계산기 2026 | 샐러리노트</title>
+<meta name="description" content="2026년 4대보험 요율로 국민연금·건강보험·장기요양·고용보험의 근로자 부담분을 계산합니다. 국민연금 기준소득월액 상하한과 계산 근거를 함께 보여줍니다.">
+<link rel="canonical" href="__BASE_URL__/four-insurance/">
+<meta property="og:title" content="4대보험 계산기 2026 | 샐러리노트">
+<meta property="og:type" content="website"><meta property="og:locale" content="ko_KR">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="brand" href="/">샐러리노트</a>
+  <nav class="nav">
+    <a href="/">연봉<span class="bar"></span></a>
+    <a href="/monthly-salary/">월급<span class="bar"></span></a>
+    <a href="/four-insurance/" aria-current="page">4대보험<span class="bar"></span></a>
+  </nav>
+  <div class="ptitle">
+  <h1>4대보험 계산기</h1>
+  <p class="sub">2026년 요율 기준 근로자 부담분을 계산합니다.</p>
+  </div>
+</header>
+
+<main class="content">
+
+<div class="card">
+  <div class="field">
+    <label for="base">보수월액 <span class="hint">(비과세 제외한 월 급여, 원)</span></label>
+    <input id="base" type="text" inputmode="numeric" autocomplete="off" value="3,500,000">
+  </div>
+  <div class="field">
+    <label for="paydate">기준일 <span class="hint">(국민연금 상·하한액 적용 시점)</span></label>
+    <input id="paydate" type="date">
+  </div>
+</div>
+
+<div id="notices"></div>
+
+<div class="card result">
+  <div class="cap">근로자 부담 합계 (월)</div>
+  <div class="big" id="total">—</div>
+  <div class="side" id="side"></div>
+</div>
+
+<div class="card">
+  <table><tbody id="breakdown"></tbody></table>
+  <details id="basisBox"><summary>계산 근거 보기</summary><div class="body"><ul id="basis"></ul></div></details>
+</div>
+
+<div class="ad"></div>
+
+<div class="card prose">
+  <h2>2026년 4대보험 요율</h2>
+  <p><b>국민연금 9.5%</b>(근로자 4.75%) · <b>건강보험 7.19%</b>(근로자 3.595%) · <b>장기요양보험</b>은 건강보험료의 13.14% · <b>고용보험</b> 실업급여 1.8%(근로자 0.9%)입니다. 산재보험은 사업주가 전액 부담하므로 근로자 공제액에 없습니다.</p>
+  <h2>국민연금은 왜 상한이 있나요</h2>
+  <p>국민연금은 기준소득월액에 상·하한이 있어 소득이 아무리 높아도 보험료가 무한정 늘지 않습니다. 이 상·하한액은 1월이 아니라 <b>매년 7월 1일</b>에 조정됩니다. 그래서 같은 급여라도 6월과 7월의 국민연금액이 다를 수 있습니다.</p>
+  <h2>2026년에 국민연금이 올랐습니다</h2>
+  <p>2025년 연금개혁으로 국민연금 보험료율이 1998년 이후 처음 인상되어 9%에서 9.5%가 되었습니다. 이후 2033년 13%가 될 때까지 매년 0.5%p씩 오를 예정입니다.</p>
+</div>
+
+</main>
+
+<footer>
+  <p>2026년 기준 · 근거: 보건복지부·고용노동부 고시. 참고용이며 법적 효력은 없습니다.</p>
+</footer>
+</div>
+<script src="/assets/engine.js"></script>
+<script src="/assets/app.js"></script>
+<script src="/assets/calc-page.js"></script>
+<script src="/assets/nav-transition.js"></script>
+<script>window.SN_PAGE({ mode: "insurance" });</script>
+</body>
+</html>
