@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>연차수당 계산기 2026 | 샐러리노트</title>
+<meta name="description" content="근속연수별 연차 발생 일수와 미사용 연차수당을 계산합니다. 근로기준법 제60조의 가산 규정과 25일 한도를 반영합니다.">
+<link rel="canonical" href="https://salarynote.pages.dev/annual-leave/">
+<meta property="og:title" content="연차수당 계산기 2026 | 샐러리노트">
+<meta property="og:type" content="website"><meta property="og:locale" content="ko_KR">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="brand" href="/">샐러리노트</a>
+  <nav class="nav">
+    <a href="/">연봉<span class="bar"></span></a>
+    <a href="/monthly-salary/">월급<span class="bar"></span></a>
+    <a href="/four-insurance/">4대보험<span class="bar"></span></a>
+    <a href="/severance-pay/">퇴직금<span class="bar"></span></a>
+    <a href="/weekly-holiday-pay/">주휴수당<span class="bar"></span></a>
+    <a href="/annual-leave/" aria-current="page">연차<span class="bar"></span></a>
+    <a href="/wage-converter/">환산<span class="bar"></span></a>
+  </nav>
+  <div class="ptitle">
+  <h1>연차수당 계산기</h1>
+  <p class="sub">근속연수별 발생 일수와 미사용 수당을 계산합니다.</p>
+  </div>
+</header>
+
+<main class="content">
+<div class="card">
+  <div class="row">
+    <div class="field">
+      <label for="years">계속근로연수 <span class="hint">(년)</span></label>
+      <input id="years" type="number" min="0" max="50" step="0.5" value="3">
+    </div>
+    <div class="field">
+      <label for="months">1년 미만이면 개근 개월 수</label>
+      <input id="months" type="number" min="0" max="12" step="1" value="0">
+    </div>
+  </div>
+  <div class="row">
+    <div class="field">
+      <label for="unused">미사용 연차 <span class="hint">(일)</span></label>
+      <input id="unused" type="number" min="0" max="25" step="1" value="5">
+    </div>
+    <div class="field">
+      <label for="daily">1일 통상임금 <span class="hint">(원)</span></label>
+      <input id="daily" type="text" inputmode="numeric" autocomplete="off" value="150,000">
+    </div>
+  </div>
+</div>
+
+<div id="notices"></div>
+
+<div class="card result">
+  <div class="cap">연차수당 계산기</div>
+  <div class="big" id="out">—</div>
+  <div class="side" id="side"></div>
+</div>
+
+<div class="card">
+  <table><tbody id="breakdown"></tbody></table>
+  <details id="basisBox"><summary>계산 근거 보기</summary><div class="body"><ul id="basis"></ul></div></details>
+</div>
+
+<div class="ad"></div>
+
+<div class="card prose">
+  <h2>연차는 몇 일 생기나요</h2>
+  <p>1년간 80% 이상 출근하면 <b>15일</b>이 발생합니다. <b>3년 이상</b> 계속 근로하면 최초 1년을 초과하는 매 2년마다 <b>1일씩 가산</b>되며, 가산을 포함한 총 일수는 <b>25일이 한도</b>입니다. 근로기준법 제60조입니다.</p>
+  <p>근속 1년 15일, 3년 16일, 5년 17일, 7년 18일 순으로 늘어 21년에 25일에 도달합니다.</p>
+  <h2>1년 미만이면요</h2>
+  <p>1개월을 개근할 때마다 1일씩, 최대 11일까지 발생합니다.</p>
+  <h2>연차수당은 어떻게 계산하나요</h2>
+  <p><b>미사용 일수 × 1일 통상임금</b>입니다. 1일 통상임금은 통상시급에 1일 소정근로시간(보통 8시간)을 곱한 값입니다.</p>
+  <h2>못 받는 경우도 있나요</h2>
+  <p>사용자가 근로기준법 제61조의 <b>연차사용촉진</b> 절차를 적법하게 거쳤다면, 미사용 연차에 대한 수당 지급 의무가 면제될 수 있습니다.</p>
+</div>
+</main>
+
+<footer>
+  <p>2026년 기준 · 최저임금 시급 10,320원. 참고용이며 법적 효력은 없습니다.</p>
+</footer>
+</div>
+<script src="/assets/engine.js"></script>
+<script src="/assets/app.js"></script>
+<script src="/assets/calc-page.js"></script>
+<script src="/assets/nav-transition.js"></script>
+<script>window.SN_PAGE({ mode: "leave" });</script>
+</body>
+</html>

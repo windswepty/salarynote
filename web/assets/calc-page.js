@@ -78,9 +78,121 @@
     calc();
   }
 
+  /** 공통 렌더러. 세 계산기가 결과 표시 구조를 공유한다. */
+  function simpleRender(el, mainValue, sideText, rows, basisObj, warnings) {
+    el.out.innerHTML = U.won(mainValue) + '<small>원</small>';
+    el.side.textContent = sideText;
+    el.rows.innerHTML = rows.map(([k, v, c]) => ROW(k, v, c)).join("");
+    const items = Object.keys(basisObj).map((k) => `${k}: ${basisObj[k]}`);
+    el.basisBox.style.display = "";
+    el.basis.innerHTML = items.map((s) => `<li>${s}</li>`).join("");
+    U.renderNotices((warnings || []).map((w) => ({ body: w })), el.notices);
+  }
+
+  function bindAll(ids, fn) {
+    for (const id of ids) {
+      const e = document.getElementById(id);
+      if (e) e.addEventListener("input", fn);
+    }
+  }
+
+  function shell() {
+    const g = (id) => document.getElementById(id);
+    return { out: g("out"), side: g("side"), rows: g("breakdown"),
+             basis: g("basis"), basisBox: g("basisBox"), notices: g("notices") };
+  }
+
+  function fail(el, e) {
+    el.out.textContent = "—"; el.side.textContent = ""; el.rows.innerHTML = "";
+    el.basisBox.style.display = "none";
+    U.renderNotices([{ kind: "err", title: "입력을 확인해 주세요", body: U.friendlyError(e) }], el.notices);
+  }
+
+  /** 주휴수당 */
+  function initHoliday() {
+    const el = shell();
+    const wageEl = document.getElementById("wage");
+    U.attachComma(wageEl);
+    const calc = () => {
+      try {
+        const r = SN.calcWeeklyHolidayPay(
+          Number(document.getElementById("weekly").value),
+          U.parseNum(wageEl) || 0, SN.rates);
+        simpleRender(el, r.amount,
+          `주 ${r.weeklyHours}시간 · 주휴 ${r.holidayHours}시간 적용`,
+          [["1주 소정근로시간", r.weeklyHours + "시간"],
+           ["주휴시간", r.holidayHours + "시간"],
+           ["시급", U.won(r.hourlyWage) + "원"],
+           ["주휴수당 (1주)", U.won(r.amount) + "원", "sum"],
+           ["월 환산액", U.won(r.monthlyAmount) + "원"]],
+          r.basis, r.warnings);
+      } catch (e) { fail(el, e); }
+    };
+    bindAll(["weekly", "wage"], calc); calc();
+  }
+
+  /** 연차수당 */
+  function initLeave() {
+    const el = shell();
+    const dailyEl = document.getElementById("daily");
+    U.attachComma(dailyEl);
+    const calc = () => {
+      try {
+        const r = SN.calcAnnualLeave(
+          Number(document.getElementById("years").value),
+          Number(document.getElementById("unused").value),
+          U.parseNum(dailyEl) || 0,
+          Number(document.getElementById("months").value));
+        simpleRender(el, r.amount,
+          `발생 연차 ${r.entitledDays}일 중 ${r.unusedDays}일 미사용`,
+          [["발생 연차", r.entitledDays + "일"],
+           ["미사용 연차", r.unusedDays + "일"],
+           ["1일 통상임금", U.won(r.dailyOrdinaryWage) + "원"],
+           ["연차수당", U.won(r.amount) + "원", "sum"]],
+          r.basis, r.warnings);
+      } catch (e) { fail(el, e); }
+    };
+    bindAll(["years", "months", "unused", "daily"], calc); calc();
+  }
+
+  /** 시급/월급/연봉 환산 */
+  function initConvert() {
+    const el = shell();
+    const ids = ["cwHourly", "cwMonthly", "cwAnnual"];
+    for (const id of ids) U.attachComma(document.getElementById(id));
+    const calc = () => {
+      const h = document.getElementById("cwHourly"),
+            m = document.getElementById("cwMonthly"),
+            a = document.getElementById("cwAnnual");
+      // 월급·연봉이 채워져 있으면 그쪽을 기준으로 삼는다.
+      const input = { weeklyHours: Number(document.getElementById("cwWeekly").value) };
+      if (U.parseNum(a)) input.annual = U.parseNum(a);
+      else if (U.parseNum(m)) input.monthly = U.parseNum(m);
+      else input.hourly = U.parseNum(h);
+      try {
+        const r = SN.convertWage(input, SN.rates);
+        simpleRender(el, r.monthly,
+          `시급 ${U.won(r.hourly)}원 · 월 ${r.monthlyHours}시간 기준`,
+          [["시급", U.won(r.hourly) + "원"],
+           ["월 소정근로시간", r.monthlyHours + "시간"],
+           ["월급", U.won(r.monthly) + "원", "sum"],
+           ["연봉", U.won(r.annual) + "원"]],
+          r.basis, r.warnings);
+        // 기준이 아닌 칸을 결과로 채워준다(입력 중인 칸은 건드리지 않는다).
+        if (document.activeElement !== h) h.value = r.hourly.toLocaleString("ko-KR");
+        if (document.activeElement !== m) m.value = r.monthly.toLocaleString("ko-KR");
+        if (document.activeElement !== a) a.value = r.annual.toLocaleString("ko-KR");
+      } catch (e) { fail(el, e); }
+    };
+    bindAll(["cwHourly", "cwMonthly", "cwAnnual", "cwWeekly"], calc); calc();
+  }
+
   window.SN_PAGE = function (opts) {
     const mode = opts.mode; // "annual" | "monthly" | "insurance" | "severance"
     if (mode === "severance") return initSeverance();
+    if (mode === "holiday") return initHoliday();
+    if (mode === "leave") return initLeave();
+    if (mode === "convert") return initConvert();
     const el = {
       salary: U.$("#salary") || U.$("#base"),
       dep: U.$("#dep"), nt: U.$("#nt"), months: U.$("#months"), paydate: U.$("#paydate"),

@@ -8,5 +8,8 @@ module.exports = [
   { url: "/monthly-salary/", nav: "월급",     title: "월급 실수령액",   priority: "0.9", changefreq: "monthly" },
   { url: "/four-insurance/", nav: "4대보험",  title: "4대보험",        priority: "0.9", changefreq: "monthly" },
   { url: "/severance-pay/",  nav: "퇴직금",   title: "퇴직금",          priority: "0.9", changefreq: "monthly" },
+  { url: "/weekly-holiday-pay/", nav: "주휴수당", title: "주휴수당", priority: "0.9", changefreq: "monthly" },
+  { url: "/annual-leave/",       nav: "연차",     title: "연차수당", priority: "0.9", changefreq: "monthly" },
+  { url: "/wage-converter/",     nav: "환산",     title: "시급 연봉 환산", priority: "0.9", changefreq: "monthly" },
   { url: "/privacy/",        nav: null,      title: "개인정보처리방침", priority: "0.2", changefreq: "yearly" },
 ];

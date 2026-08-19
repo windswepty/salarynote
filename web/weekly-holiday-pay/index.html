@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>주휴수당 계산기 2026 | 샐러리노트</title>
+<meta name="description" content="1주 소정근로시간과 시급으로 주휴수당을 계산합니다. 단시간 근로자 비례 계산과 15시간 미만 제외 규정을 반영합니다.">
+<link rel="canonical" href="https://salarynote.pages.dev/weekly-holiday-pay/">
+<meta property="og:title" content="주휴수당 계산기 2026 | 샐러리노트">
+<meta property="og:type" content="website"><meta property="og:locale" content="ko_KR">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="brand" href="/">샐러리노트</a>
+  <nav class="nav">
+    <a href="/">연봉<span class="bar"></span></a>
+    <a href="/monthly-salary/">월급<span class="bar"></span></a>
+    <a href="/four-insurance/">4대보험<span class="bar"></span></a>
+    <a href="/severance-pay/">퇴직금<span class="bar"></span></a>
+    <a href="/weekly-holiday-pay/" aria-current="page">주휴수당<span class="bar"></span></a>
+    <a href="/annual-leave/">연차<span class="bar"></span></a>
+    <a href="/wage-converter/">환산<span class="bar"></span></a>
+  </nav>
+  <div class="ptitle">
+  <h1>주휴수당 계산기</h1>
+  <p class="sub">단시간 근로자 비례 계산까지 반영합니다.</p>
+  </div>
+</header>
+
+<main class="content">
+<div class="card">
+  <div class="row">
+    <div class="field">
+      <label for="weekly">1주 소정근로시간 <span class="hint">(시간)</span></label>
+      <input id="weekly" type="number" min="1" max="68" step="0.5" value="40">
+    </div>
+    <div class="field">
+      <label for="wage">시급 <span class="hint">(원)</span></label>
+      <input id="wage" type="text" inputmode="numeric" autocomplete="off" value="10,320">
+    </div>
+  </div>
+</div>
+
+<div id="notices"></div>
+
+<div class="card result">
+  <div class="cap">주휴수당 계산기</div>
+  <div class="big" id="out">—</div>
+  <div class="side" id="side"></div>
+</div>
+
+<div class="card">
+  <table><tbody id="breakdown"></tbody></table>
+  <details id="basisBox"><summary>계산 근거 보기</summary><div class="body"><ul id="basis"></ul></div></details>
+</div>
+
+<div class="ad"></div>
+
+<div class="card prose">
+  <h2>주휴수당은 누가 받나요</h2>
+  <p>4주를 평균해 <b>1주 소정근로시간이 15시간 이상</b>이고, 그 주의 소정근로일을 <b>개근</b>한 근로자에게 발생합니다. 근로기준법 제55조에 따른 유급휴일 수당입니다.</p>
+  <h2>단시간 근로자는 어떻게 계산하나요</h2>
+  <p>근로기준법 시행령 별표2에 따라 <b>4주 소정근로시간을 통상근로자의 4주 총 소정근로일수(20일)로 나눈</b> 시간에 시급을 곱합니다. 결과적으로 <b>주 소정근로시간 ÷ 5 × 시급</b>이 됩니다.</p>
+  <p>예를 들어 주 20시간 근무에 시급 10,000원이면 20÷5=4시간, 4×10,000=40,000원입니다.</p>
+  <h2>주 40시간을 넘게 일하면요</h2>
+  <p>주휴수당은 8시간분이 상한입니다. 40시간을 넘는 근로는 연장근로수당(통상임금의 1.5배) 영역이라 주휴수당과 별개로 계산됩니다.</p>
+  <h2>주 15시간 미만이면</h2>
+  <p>초단시간 근로자로 분류되어 근로기준법 제55조가 적용되지 않습니다. 주휴수당이 발생하지 않고, 퇴직금과 연차도 대상에서 제외됩니다.</p>
+</div>
+</main>
+
+<footer>
+  <p>2026년 기준 · 최저임금 시급 10,320원. 참고용이며 법적 효력은 없습니다.</p>
+</footer>
+</div>
+<script src="/assets/engine.js"></script>
+<script src="/assets/app.js"></script>
+<script src="/assets/calc-page.js"></script>
+<script src="/assets/nav-transition.js"></script>
+<script>window.SN_PAGE({ mode: "holiday" });</script>
+</body>
+</html>

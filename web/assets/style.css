@@ -251,3 +251,15 @@ main     { view-transition-name: sn-content; }
    전환이 없으면 화면이 뚝 끊겨 오히려 읽기 어렵다는 판단이다. */
 
 .result.empty .big { color: var(--line-2); font-weight: 600; }
+
+/* 계산기가 7개가 되면서 모바일에서 내비가 넘친다.
+   줄바꿈 대신 가로 스크롤로 처리한다 — 줄이 늘면 헤더 높이가 흔들려
+   페이지 전환 애니메이션이 어색해지기 때문이다. */
+.nav {
+  overflow-x: auto;
+  scrollbar-width: none;          /* Firefox */
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+.nav::-webkit-scrollbar { display: none; }
+.nav a { flex: 0 0 auto; scroll-snap-align: start; }
