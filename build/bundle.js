@@ -15,7 +15,7 @@ const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
 const rates = read("data/rates-2026.json");
 const table = read("data/simplified-tax-table-2026.json");
 
-const MODULES = ["insurance.js", "income-tax.js", "net-pay.js"];
+const MODULES = ["insurance.js", "income-tax.js", "net-pay.js", "severance.js"];
 
 const wrapped = MODULES.map((name) => {
   let src = read(path.join("src/engine", name));
@@ -49,6 +49,7 @@ ${wrapped}
     calcSocialInsurance: __mod["insurance.js"].calcSocialInsurance,
     calcIncomeTax: __mod["income-tax.js"].calcIncomeTax,
     lookupTableTax: __mod["income-tax.js"].lookupTableTax,
+    calcSeverance: __mod["severance.js"].calcSeverance,
   };
 })(typeof window !== "undefined" ? window : globalThis);
 `;

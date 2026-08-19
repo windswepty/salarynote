@@ -22,13 +22,8 @@ if (!/^https?:\/\/[^\s/]+$/.test(baseUrl)) {
   process.exit(1);
 }
 
-/** 사이트맵에 넣을 페이지. 새 계산기를 추가하면 여기에도 추가한다. */
-const PAGES = [
-  { url: "/", priority: "1.0", changefreq: "monthly" },
-  { url: "/monthly-salary/", priority: "0.9", changefreq: "monthly" },
-  { url: "/four-insurance/", priority: "0.9", changefreq: "monthly" },
-  { url: "/privacy/", priority: "0.2", changefreq: "yearly" },
-];
+/** 페이지 정의는 build/pages.js 한 곳에서 관리한다. */
+const PAGES = require("./pages.js");
 
 function walk(dir, out = []) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {

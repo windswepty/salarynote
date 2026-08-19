@@ -5,8 +5,82 @@
   const ROW = (label, value, cls) =>
     `<tr class="${cls || ""}"><th>${label}</th><td class="num">${value}</td></tr>`;
 
+  /**
+   * 퇴직금 모드. 입력 구성이 실수령액 계산기와 전혀 달라서 별도로 다룬다.
+   * (급여 입력 하나가 아니라 날짜 2개 + 금액 4개 + 선택 항목 2개)
+   */
+  function initSeverance() {
+    const g = (id) => document.getElementById(id);
+    const el = {
+      hire: g("hire"), leave: g("leave"),
+      base3m: g("base3m"), extra3m: g("extra3m"), bonus: g("bonus"),
+      leavepay: g("leavepay"), ordinary: g("ordinary"), excluded: g("excluded"),
+      out: g("out"), side: g("side"), rows: g("breakdown"),
+      basis: g("basis"), basisBox: g("basisBox"), notices: g("notices"),
+    };
+    for (const k of ["base3m", "extra3m", "bonus", "leavepay", "ordinary"])
+      if (el[k]) U.attachComma(el[k]);
+
+    // 기본값: 오늘 퇴사, 3년 전 입사. 빈 화면보다 예시가 이해를 돕는다.
+    if (el.leave && !el.leave.value) el.leave.value = U.todayISO();
+    if (el.hire && !el.hire.value) {
+      const [y, m, d] = U.todayISO().split("-");
+      el.hire.value = `${Number(y) - 3}-${m}-${d}`;
+    }
+
+    function calc() {
+      const notices = [];
+      let r;
+      try {
+        r = SN.calcSeverance({
+          hireDate: el.hire.value,
+          leaveDate: el.leave.value,
+          base3m: U.parseNum(el.base3m) || 0,
+          extra3m: U.parseNum(el.extra3m) || 0,
+          annualBonus: U.parseNum(el.bonus) || 0,
+          annualLeaveAllowance: U.parseNum(el.leavepay) || 0,
+          ordinaryDailyWage: U.parseNum(el.ordinary) || 0,
+          excludedDays: Number(el.excluded.value) || 0,
+        });
+      } catch (e) {
+        el.out.textContent = "—";
+        el.side.textContent = "";
+        el.rows.innerHTML = "";
+        el.basisBox.style.display = "none";
+        U.renderNotices([{ kind: "err", title: "입력을 확인해 주세요", body: U.friendlyError(e) }], el.notices);
+        return;
+      }
+
+      el.out.innerHTML = U.won(r.amount) + '<small>원</small>';
+      el.side.textContent = `근속 ${r.serviceYears}년 (${r.serviceDays}일) · 1일 ${U.won(r.appliedDaily)}원 적용`;
+
+      el.rows.innerHTML =
+        ROW("계속근로일수", r.serviceDays.toLocaleString("ko-KR") + "일") +
+        ROW("평균임금 산정기간", r.periodDays + "일") +
+        ROW("임금총액 (3개월)", U.won(r.totalWage) + "원") +
+        (r.bonusPortion ? ROW("└ 상여금 산입분", U.won(r.bonusPortion) + "원") : "") +
+        (r.leavePortion ? ROW("└ 연차수당 산입분", U.won(r.leavePortion) + "원") : "") +
+        ROW("1일 평균임금", U.won(r.averageDaily) + "원") +
+        (r.ordinaryDaily ? ROW("1일 통상임금", U.won(r.ordinaryDaily) + "원") : "") +
+        ROW("적용 1일 임금", U.won(r.appliedDaily) + "원" + (r.ordinaryApplied ? " (통상임금)" : " (평균임금)")) +
+        ROW("예상 퇴직금", U.won(r.amount) + "원", "sum");
+
+      const items = Object.keys(r.basis).map((k) => `${k}: ${r.basis[k]}`);
+      el.basisBox.style.display = "";
+      el.basis.innerHTML = items.map((s) => `<li>${s}</li>`).join("");
+
+      for (const w of (r.warnings || [])) notices.push({ body: w });
+      U.renderNotices(notices, el.notices);
+    }
+
+    for (const k of ["hire", "leave", "base3m", "extra3m", "bonus", "leavepay", "ordinary", "excluded"])
+      if (el[k]) el[k].addEventListener("input", calc);
+    calc();
+  }
+
   window.SN_PAGE = function (opts) {
-    const mode = opts.mode; // "annual" | "monthly" | "insurance"
+    const mode = opts.mode; // "annual" | "monthly" | "insurance" | "severance"
+    if (mode === "severance") return initSeverance();
     const el = {
       salary: U.$("#salary") || U.$("#base"),
       dep: U.$("#dep"), nt: U.$("#nt"), months: U.$("#months"), paydate: U.$("#paydate"),
