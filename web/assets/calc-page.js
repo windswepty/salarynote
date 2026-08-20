@@ -187,12 +187,46 @@
     bindAll(["cwHourly", "cwMonthly", "cwAnnual", "cwWeekly"], calc); calc();
   }
 
+  /** 아르바이트 — 4대보험 적용 판정을 표에 드러내는 것이 핵심이다. */
+  function initPartTime() {
+    const el = shell();
+    const wageEl = document.getElementById("ptWage");
+    U.attachComma(wageEl);
+    const YN = (b) => (b ? "적용" : "미적용");
+    const calc = () => {
+      try {
+        const r = SN.calcPartTimePay({
+          hourlyWage: U.parseNum(wageEl) || 0,
+          weeklyHours: Number(document.getElementById("ptWeekly").value),
+          monthsEmployed: Number(document.getElementById("ptMonths").value),
+          payDate: U.todayISO(),
+        }, SN.rates, SN.taxTable);
+
+        const covered = [r.coverage.pension, r.coverage.health, r.coverage.employment].filter(Boolean).length;
+        simpleRender(el, r.netPay,
+          `월 ${r.monthlyWorkHours + r.monthlyHolidayHours}시간 · 4대보험 ${covered}종 적용`,
+          [["기본급", U.won(r.basePay) + "원"],
+           ["주휴수당", r.holidayPay ? U.won(r.holidayPay) + "원" : "미발생 (주 15시간 미만)"],
+           ["월 총지급액", U.won(r.gross) + "원"],
+           ["국민연금", r.coverage.pension ? "-" + U.won(r.insurance.pension) + "원" : YN(false)],
+           ["건강보험", r.coverage.health ? "-" + U.won(r.insurance.health) + "원" : YN(false)],
+           ["장기요양보험", r.coverage.health ? "-" + U.won(r.insurance.care) + "원" : YN(false)],
+           ["고용보험", r.coverage.employment ? "-" + U.won(r.insurance.employment) + "원" : YN(false)],
+           ["소득세", "-" + U.won(r.incomeTax + r.localIncomeTax) + "원"],
+           ["월 실수령액", U.won(r.netPay) + "원", "sum"]],
+          r.basis, r.warnings);
+      } catch (e) { fail(el, e); }
+    };
+    bindAll(["ptWage", "ptWeekly", "ptMonths"], calc); calc();
+  }
+
   window.SN_PAGE = function (opts) {
     const mode = opts.mode; // "annual" | "monthly" | "insurance" | "severance"
     if (mode === "severance") return initSeverance();
     if (mode === "holiday") return initHoliday();
     if (mode === "leave") return initLeave();
     if (mode === "convert") return initConvert();
+    if (mode === "parttime") return initPartTime();
     const el = {
       salary: U.$("#salary") || U.$("#base"),
       dep: U.$("#dep"), nt: U.$("#nt"), months: U.$("#months"), paydate: U.$("#paydate"),

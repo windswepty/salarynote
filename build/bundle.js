@@ -72,7 +72,7 @@ console.log(`원장: ${path.basename(LEDGER.ledgerPath)} (${LEDGER.year}년)`);
   }
 }
 
-const MODULES = ["insurance.js", "income-tax.js", "net-pay.js", "severance.js", "work-allowance.js"];
+const MODULES = ["insurance.js", "income-tax.js", "net-pay.js", "severance.js", "work-allowance.js", "parttime.js"];
 
 const wrapped = MODULES.map((name) => {
   let src = read(path.join("src/engine", name));
@@ -110,6 +110,7 @@ ${wrapped}
     calcWeeklyHolidayPay: __mod["work-allowance.js"].calcWeeklyHolidayPay,
     calcAnnualLeave: __mod["work-allowance.js"].calcAnnualLeave,
     convertWage: __mod["work-allowance.js"].convertWage,
+    calcPartTimePay: __mod["parttime.js"].calcPartTimePay,
   };
 })(typeof window !== "undefined" ? window : globalThis);
 `;

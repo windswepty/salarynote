@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>아르바이트 급여 계산기 2026 | 샐러리노트</title>
+<meta name="description" content="시급과 주 근무시간으로 알바 월급과 실수령액을 계산합니다. 주휴수당과 4대보험 가입 여부(월 60시간·주 15시간 기준)를 자동으로 판정합니다.">
+<link rel="canonical" href="https://salarynote.pages.dev/part-time/">
+<meta property="og:title" content="아르바이트 급여 계산기 2026 | 샐러리노트">
+<meta property="og:type" content="website"><meta property="og:locale" content="ko_KR">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="brand" href="/">샐러리노트</a>
+  <nav class="nav">
+    <a href="/">연봉<span class="bar"></span></a>
+    <a href="/monthly-salary/">월급<span class="bar"></span></a>
+    <a href="/four-insurance/">4대보험<span class="bar"></span></a>
+    <a href="/severance-pay/">퇴직금<span class="bar"></span></a>
+    <a href="/weekly-holiday-pay/">주휴수당<span class="bar"></span></a>
+    <a href="/annual-leave/">연차<span class="bar"></span></a>
+    <a href="/wage-converter/">환산<span class="bar"></span></a>
+    <a href="/part-time/" aria-current="page">알바<span class="bar"></span></a>
+  </nav>
+  <div class="ptitle">
+  <h1>아르바이트 급여 계산기</h1>
+  <p class="sub">주휴수당과 4대보험 가입 여부까지 자동으로 판정합니다.</p>
+  </div>
+</header>
+
+<main class="content">
+<div class="card">
+  <div class="row">
+    <div class="field">
+      <label for="ptWage">시급 <span class="hint">(원)</span></label>
+      <input id="ptWage" type="text" inputmode="numeric" autocomplete="off" value="10,320">
+    </div>
+    <div class="field">
+      <label for="ptWeekly">1주 근무시간 <span class="hint">(시간)</span></label>
+      <input id="ptWeekly" type="number" min="1" max="68" step="0.5" value="20">
+    </div>
+  </div>
+  <div class="field">
+    <label for="ptMonths">계속 근무한 개월 수 <span class="hint">(고용보험 판정에 사용)</span></label>
+    <input id="ptMonths" type="number" min="0" max="600" step="1" value="1">
+  </div>
+</div>
+
+<div id="notices"></div>
+
+<div class="card result">
+  <div class="cap">월 실수령액</div>
+  <div class="big" id="out">—</div>
+  <div class="side" id="side"></div>
+</div>
+
+<div class="card">
+  <table><tbody id="breakdown"></tbody></table>
+  <details id="basisBox"><summary>계산 근거 보기</summary><div class="body"><ul id="basis"></ul></div></details>
+</div>
+
+<div class="ad"></div>
+
+<div class="card prose">
+  <h2>알바도 주휴수당을 받나요</h2>
+  <p>1주 소정근로시간이 <b>15시간 이상</b>이고 그 주를 개근했다면 받습니다. 근로기준법 제55조는 정규직과 알바를 구분하지 않습니다. 15시간 미만이면 초단시간근로자로 분류되어 주휴수당이 발생하지 않고, 퇴직금과 연차도 대상에서 제외됩니다.</p>
+
+  <h2>4대보험은 언제부터 떼나요</h2>
+  <p>여기가 알바 급여에서 가장 많이 갈리는 부분입니다. 기준은 급여액이 아니라 <b>소정근로시간</b>입니다.</p>
+  <p><b>국민연금·건강보험</b>은 1개월 소정근로시간이 60시간 이상일 때 가입 대상이 됩니다(국민연금법 시행령 제2조제4호 등). <b>고용보험</b>은 월 60시간 미만이거나 주 15시간 미만이면 제외되지만, <b>3개월 이상 계속 근로하면 단시간이어도 적용</b>됩니다.</p>
+  <p>그래서 주 14시간처럼 애매한 구간에서는 국민연금은 적용되는데 고용보험은 안 되는 경우가 실제로 생깁니다. 이 계산기는 세 보험을 각각 판정해서 보여줍니다.</p>
+
+  <h2>4대보험을 떼면 손해인가요</h2>
+  <p>당장 실수령액은 줄지만 국민연금은 나중에 연금으로 돌아오고, 고용보험은 실업급여 수급 자격의 근거가 됩니다. 건강보험은 직장가입자가 되면 지역가입자일 때보다 보험료가 낮아지는 경우가 많습니다.</p>
+
+  <h2>산재보험은 왜 안 보이나요</h2>
+  <p>산재보험은 <b>사업주가 전액 부담</b>하므로 근로자 급여에서 공제되지 않습니다. 근무시간과 무관하게 모든 근로자에게 적용됩니다.</p>
+</div>
+</main>
+
+<footer>
+  <p><!--STAMP:footer-->2026년 기준 · 국민연금 9.5%, 건강보험 7.19%, 장기요양 13.14%, 고용보험 1.8%, 최저임금 10,320원 · 자료 확인일 2026-08-18<!--/STAMP--></p>
+  <p>근거: 근로기준법 제55조, 국민연금법 시행령 제2조, 국민건강보험법 시행령 제9조, 고용보험법 시행령 제3조. 참고용이며 법적 효력은 없습니다.</p>
+</footer>
+</div>
+<script src="/assets/engine.js"></script>
+<script src="/assets/app.js"></script>
+<script src="/assets/calc-page.js"></script>
+<script src="/assets/nav-transition.js"></script>
+<script>window.SN_PAGE({ mode: "parttime" });</script>
+</body>
+</html>

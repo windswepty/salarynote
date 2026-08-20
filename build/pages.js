@@ -11,5 +11,6 @@ module.exports = [
   { url: "/weekly-holiday-pay/", nav: "주휴수당", title: "주휴수당", priority: "0.9", changefreq: "monthly" },
   { url: "/annual-leave/",       nav: "연차",     title: "연차수당", priority: "0.9", changefreq: "monthly" },
   { url: "/wage-converter/",     nav: "환산",     title: "시급 연봉 환산", priority: "0.9", changefreq: "monthly" },
+  { url: "/part-time/",       nav: "알바",     title: "아르바이트 급여", priority: "0.9", changefreq: "monthly" },
   { url: "/privacy/",        nav: null,      title: "개인정보처리방침", priority: "0.2", changefreq: "yearly" },
 ];
