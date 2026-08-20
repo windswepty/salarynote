@@ -1,0 +1,80 @@
+{
+  "_meta": {
+    "purpose": "고용24(work24.go.kr) 공식 실업급여 간편 모의계산 실측 정답지",
+    "capturedAt": "2026-08-20",
+    "endpoint": "POST https://www.work24.go.kr/cm/c/f/1100/retrieveNewMainCalcAjax.do",
+    "entryPage": "https://www.work24.go.kr/cm/c/f/1100/selecSimulate.do?upprSystClId=SC00000253&systClId=SC00000254&systId=SI00000411&systCnntId=CI00002358",
+    "robotsNote": "work24 robots.txt disallows /ei/ and /cm/common/. 이 엔드포인트(/cm/c/f/1100/)는 허용 경로.",
+    "params": {
+      "mode": "1 = 상용직",
+      "old": "퇴사 당시 만 나이",
+      "prd": "고용보험 근로기간(개월)",
+      "appontWorkHr": "1일 소정근로시간(1~8)",
+      "ave_sal": "floor(월평균임금 / 30)  ← 공식 간편계산기의 평균임금일액 환산 규칙",
+      "dspsnAt": "장애여부 Y/N",
+      "programIdentification": "EBG020000001653"
+    },
+    "rateBasis": {
+      "year": 2026,
+      "기초일액_상한": 113500,
+      "구직급여일액_상한": 68100,
+      "최저임금_시급": 10320,
+      "최저기초일액_8시간": 82560,
+      "최저구직급여일액_8시간": 66048,
+      "근거": [
+        "고용보험법 시행령 제68조제1항 (대통령령 제35934호, 2025.12.23 개정, 2026.1.1 시행)",
+        "고용보험법 제45조제4항·제5항, 제46조",
+        "고용보험법 별표1 (개정 2019.8.27)"
+      ]
+    },
+    "observedRules": [
+      "구직급여일액 = clamp(min(기초일액, 113500) * 0.6, 하한, 상한) where 하한 = 최저임금시급 * 1일소정근로시간 * 0.8",
+      "하한은 1일 소정근로시간에 비례한다. 8시간=66048, 4시간=33024, 2시간=16512.",
+      "상한(68100)은 소정근로시간과 무관하게 고정.",
+      "공식 계산기는 구직급여일액을 원 단위로 반올림/절사하지 않고 소수점을 그대로 유지한다 (예: 기초일액 110083 -> 66049.8).",
+      "총액 = 소정급여일수 x 구직급여일액. 대기기간 7일은 차감하지 않는다.",
+      "장애인(dspsnAt=Y)은 50세 이상으로 취급."
+    ]
+  },
+  "requestedCases": [
+    { "label": "월200만/만30세/피보험1년", "input": { "old": 30, "prd": 12, "appontWorkHr": 8, "ave_sal": 66666, "dspsnAt": "N" }, "expected": { "days": 150, "dailyAmount": 66048, "total": 9907200, "bound": "하한" } },
+    { "label": "월300만/만30세/피보험3년", "input": { "old": 30, "prd": 36, "appontWorkHr": 8, "ave_sal": 100000, "dspsnAt": "N" }, "expected": { "days": 180, "dailyAmount": 66048, "total": 11888640, "bound": "하한" } },
+    { "label": "월300만/만55세/피보험10년", "input": { "old": 55, "prd": 120, "appontWorkHr": 8, "ave_sal": 100000, "dspsnAt": "N" }, "expected": { "days": 270, "dailyAmount": 66048, "total": 17832960, "bound": "하한" } },
+    { "label": "월500만/만40세/피보험5년", "input": { "old": 40, "prd": 60, "appontWorkHr": 8, "ave_sal": 166666, "dspsnAt": "N" }, "expected": { "days": 210, "dailyAmount": 68100, "total": 14301000, "bound": "상한" } },
+    { "label": "월150만/만25세/피보험1년", "input": { "old": 25, "prd": 12, "appontWorkHr": 8, "ave_sal": 50000, "dspsnAt": "N" }, "expected": { "days": 150, "dailyAmount": 66048, "total": 9907200, "bound": "하한" } }
+  ],
+  "boundaryProbes": [
+    { "label": "하한 경계 -1", "input": { "old": 30, "prd": 12, "appontWorkHr": 8, "ave_sal": 110079 }, "expected": { "days": 150, "total": 9907200, "dailyAmount": 66048 } },
+    { "label": "하한 경계", "input": { "old": 30, "prd": 12, "appontWorkHr": 8, "ave_sal": 110080 }, "expected": { "days": 150, "total": 9907200, "dailyAmount": 66048 } },
+    { "label": "하한 경계 +1 (소수 발생)", "input": { "old": 30, "prd": 12, "appontWorkHr": 8, "ave_sal": 110081 }, "expected": { "days": 150, "total": 9907290, "dailyAmount": 66048.6 } },
+    { "label": "소수 확인", "input": { "old": 30, "prd": 12, "appontWorkHr": 8, "ave_sal": 110083 }, "expected": { "days": 150, "total": 9907470, "dailyAmount": 66049.8 } },
+    { "label": "중간대", "input": { "old": 30, "prd": 12, "appontWorkHr": 8, "ave_sal": 111000 }, "expected": { "days": 150, "total": 9990000, "dailyAmount": 66600 } },
+    { "label": "중간대", "input": { "old": 30, "prd": 12, "appontWorkHr": 8, "ave_sal": 112000 }, "expected": { "days": 150, "total": 10080000, "dailyAmount": 67200 } },
+    { "label": "상한 경계 -1", "input": { "old": 30, "prd": 12, "appontWorkHr": 8, "ave_sal": 113499 }, "expected": { "days": 150, "total": 10214910, "dailyAmount": 68099.4 } },
+    { "label": "상한 경계", "input": { "old": 30, "prd": 12, "appontWorkHr": 8, "ave_sal": 113500 }, "expected": { "days": 150, "total": 10215000, "dailyAmount": 68100 } },
+    { "label": "상한 초과", "input": { "old": 30, "prd": 12, "appontWorkHr": 8, "ave_sal": 113501 }, "expected": { "days": 150, "total": 10215000, "dailyAmount": 68100 } },
+    { "label": "상한 초과 대", "input": { "old": 30, "prd": 12, "appontWorkHr": 8, "ave_sal": 999999 }, "expected": { "days": 150, "total": 10215000, "dailyAmount": 68100 } },
+    { "label": "초저임금 8시간", "input": { "old": 30, "prd": 12, "appontWorkHr": 8, "ave_sal": 20000 }, "expected": { "days": 150, "total": 9907200, "dailyAmount": 66048 } },
+    { "label": "4시간 소정, 저임금", "input": { "old": 30, "prd": 12, "appontWorkHr": 4, "ave_sal": 50000 }, "expected": { "days": 150, "total": 4953600, "dailyAmount": 33024 } },
+    { "label": "4시간 소정, 고임금", "input": { "old": 30, "prd": 12, "appontWorkHr": 4, "ave_sal": 999999 }, "expected": { "days": 150, "total": 10215000, "dailyAmount": 68100 } },
+    { "label": "2시간 소정", "input": { "old": 30, "prd": 12, "appontWorkHr": 2, "ave_sal": 100000 }, "expected": { "days": 150, "total": 9000000, "dailyAmount": 60000 } },
+    { "label": "1시간 소정", "input": { "old": 30, "prd": 12, "appontWorkHr": 1, "ave_sal": 50000 }, "expected": { "days": 150, "total": 4500000, "dailyAmount": 30000 } }
+  ],
+  "durationTable": {
+    "_source": "고용보험법 별표1 (개정 2019.8.27), 공식 계산기 실측으로 전 경계 일치 확인",
+    "under50": { "lt1y": 120, "1y_3y": 150, "3y_5y": 180, "5y_10y": 210, "gte10y": 240 },
+    "gte50_or_disabled": { "lt1y": 120, "1y_3y": 180, "3y_5y": 210, "5y_10y": 240, "gte10y": 270 },
+    "observedMonthBoundaries": {
+      "1": 120, "6": 120, "11": 120,
+      "12": 150, "23": 150, "24": 150, "35": 150,
+      "36": 180, "59": 180,
+      "60": 210, "119": 210,
+      "120": 240, "240": 240
+    },
+    "ageBoundary": { "48": "under50", "49": "under50", "50": "gte50", "51": "gte50", "65": "gte50", "70": "gte50" },
+    "disabledProbe": [
+      { "old": 30, "prd": 36, "dspsnAt": "Y", "days": 210 },
+      { "old": 30, "prd": 120, "dspsnAt": "Y", "days": 270 }
+    ]
+  }
+}

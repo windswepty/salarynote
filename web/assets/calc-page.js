@@ -96,6 +96,12 @@
     }
   }
 
+  /** 빈 입력은 0 이 아니라 '없음'이다. 엔진이 필수값 검사를 하도록 그대로 넘긴다. */
+  function blankToUndefined(v) {
+    const s = String(v == null ? "" : v).trim();
+    return s === "" ? undefined : Number(s);
+  }
+
   function shell() {
     const g = (id) => document.getElementById(id);
     return { out: g("out"), side: g("side"), rows: g("breakdown"),
@@ -220,9 +226,85 @@
     bindAll(["ptWage", "ptWeekly", "ptMonths"], calc); calc();
   }
 
+  /**
+   * 실업급여(구직급여).
+   * 여기서만 다른 점이 두 가지 있다.
+   *  1) 엔진 예외 메시지를 그대로 보여준다. 이 계산기의 거부 사유(지원하지 않는 이직일,
+   *     8시간 초과 소정근로시간 등)는 그 자체가 사용자에게 필요한 정보라서
+   *     "입력값을 다시 확인해 주세요"로 뭉개면 왜 막혔는지 알 수 없다.
+   *  2) 별표1 표를 원장에서 꺼내 그린다. HTML 에 일수를 손으로 적지 않기 위해서다.
+   */
+  function initUnemployment() {
+    const el = shell();
+    const g = (id) => document.getElementById(id);
+    const wageEl = g("uiWage");
+    U.attachComma(wageEl);
+
+    if (g("uiLeave") && !g("uiLeave").value) g("uiLeave").value = U.todayISO();
+
+    // 별표1 전 칸을 원장에서 그린다.
+    const tb = SN.benefitDaysTable(SN.unemployment);
+    const head = "<tr><th>이직일 현재 연령</th>" +
+      tb.columns.map((c) => `<td class="num">${c}</td>`).join("") + "</tr>";
+    const body = tb.rows.map((r) =>
+      `<tr><th>${r.label}</th>` + r.days.map((d) => `<td class="num">${d}일</td>`).join("") + "</tr>").join("");
+    const tableBox = g("daysTable");
+    if (tableBox) {
+      tableBox.innerHTML =
+        `<table><tbody>${head}${body}</tbody></table>` +
+        `<p class="hint">${tb.remark}</p><p class="hint">근거: ${tb.basis}</p>`;
+    }
+
+    function failU(e) {
+      const raw = String((e && e.message) || e || "");
+      el.out.textContent = "—"; el.side.textContent = ""; el.rows.innerHTML = "";
+      el.basisBox.style.display = "none";
+      // payDate 는 엔진 내부 용어라 그대로 내보내지 않는다.
+      const body = /payDate/.test(raw) ? U.friendlyError(e) : raw;
+      U.renderNotices([{ kind: "err", title: "계산할 수 없습니다", body: body }], el.notices);
+    }
+
+    const calc = () => {
+      let r;
+      try {
+        r = SN.calcUnemploymentBenefit({
+          leaveDate: g("uiLeave").value,
+          monthlyWage: U.parseNum(wageEl) || 0,
+          // ★빈 칸을 0 으로 바꾸지 않는다.★ Number("") 는 0 이라 엔진의 필수값
+          // 검사를 통과해 버리고, 가입기간을 비우면 '1년 미만'으로 조용히 계산돼
+          // 틀린 금액이 큰 글씨로 표시됐다. 원시 문자열을 넘겨 엔진이 판단하게 한다.
+          age: blankToUndefined(g("uiAge").value),
+          insuredMonths: blankToUndefined(g("uiMonths").value),
+          dailyWorkHours: blankToUndefined(g("uiHours").value),
+          disabled: g("uiDisabled").value === "Y",
+        }, SN.unemployment);
+      } catch (e) { return failU(e); }
+
+      const daily = r.dailyAmountIsFractional ? r.dailyAmount.toLocaleString("ko-KR") : U.won(r.dailyAmount);
+      simpleRender(el, r.totalAmount,
+        `1일 ${daily}원 × ${r.days}일 · ${r.bound === "없음" ? "상·하한 미구속" : r.bound + " 적용"}`,
+        [["평균임금일액", U.won(r.rawBaseDaily) + "원"],
+         ["최저기초일액 (하한)", U.won(r.minBaseDaily) + "원"],
+         ["기초일액 상한", U.won(r.maxBaseDaily) + "원"],
+         ["적용 기초일액", U.won(r.baseDaily) + "원"],
+         ["구직급여일액", daily + "원" + (r.bound === "없음" ? "" : ` (${r.bound})`), "sum"],
+         ["소정급여일수", `${r.days}일 (${r.ageBracketLabel} · ${r.periodBracketLabel})`],
+         ["총 예상 수령액", U.won(r.totalAmount) + "원", "sum"],
+         ["수급기간 만료일", r.benefitWindowEnd]],
+        r.basis, r.warnings);
+    };
+    bindAll(["uiWage", "uiAge", "uiMonths", "uiHours", "uiLeave", "uiDisabled"], calc);
+    for (const id of ["uiDisabled"]) {
+      const e = document.getElementById(id);
+      if (e) e.addEventListener("change", calc);
+    }
+    calc();
+  }
+
   window.SN_PAGE = function (opts) {
     const mode = opts.mode; // "annual" | "monthly" | "insurance" | "severance"
     if (mode === "severance") return initSeverance();
+    if (mode === "unemployment") return initUnemployment();
     if (mode === "holiday") return initHoliday();
     if (mode === "leave") return initLeave();
     if (mode === "convert") return initConvert();

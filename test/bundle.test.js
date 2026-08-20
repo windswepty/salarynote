@@ -12,6 +12,8 @@ const rates = require(L.ledgerPath);
 const table = require(L.taxTablePath);
 const { calcNetPay } = R("src/engine/net-pay.js");
 const { lookupTableTax } = R("src/engine/income-tax.js");
+const { calcUnemploymentBenefit, benefitDaysTable } = R("src/engine/unemployment.js");
+const unemployment = require(path.join(__dirname, "..", "data", `unemployment-${L.year}.json`));
 
 // 번들을 브라우저처럼 로드한다.
 const g = {};
@@ -27,13 +29,48 @@ const t = (name, fn) => {
 console.log("\n[브라우저 번들 정합성]\n");
 
 t("번들이 공개 API를 모두 노출한다", () => {
-  for (const k of ["rates", "taxTable", "calcNetPay", "calcSocialInsurance", "calcIncomeTax", "lookupTableTax"])
+  for (const k of ["rates", "taxTable", "unemployment", "calcNetPay", "calcSocialInsurance",
+                   "calcIncomeTax", "lookupTableTax", "calcUnemploymentBenefit", "benefitDaysTable"])
     assert.ok(B[k], `${k} 누락`);
 });
 
 t("번들에 실린 데이터가 원본 JSON과 동일하다", () => {
   assert.deepStrictEqual(B.rates, rates);
   assert.deepStrictEqual(B.taxTable, table);
+  assert.deepStrictEqual(B.unemployment, unemployment);
+});
+
+t("실업급여가 번들에서도 원본 엔진과 완전히 일치한다 (스윕)", () => {
+  let checked = 0;
+  for (const monthlyWage of [1_500_000, 2_500_000, 3_300_000, 3_500_000, 5_000_000, 12_000_000]) {
+    for (const age of [29, 49, 50, 66]) {
+      for (const insuredMonths of [6, 12, 36, 60, 120]) {
+        for (const leaveDate of ["2025-11-30", "2026-01-01", "2026-08-20"]) {
+          const input = { leaveDate, monthlyWage, age, insuredMonths, dailyWorkHours: 8 };
+          const a = calcUnemploymentBenefit(input, unemployment);
+          const b = B.calcUnemploymentBenefit(input, B.unemployment);
+          assert.strictEqual(b.dailyAmount, a.dailyAmount, `일액 @ ${JSON.stringify(input)}`);
+          assert.strictEqual(b.days, a.days, `일수 @ ${JSON.stringify(input)}`);
+          assert.strictEqual(b.totalAmount, a.totalAmount, `총액 @ ${JSON.stringify(input)}`);
+          assert.strictEqual(b.bound, a.bound, `구속 @ ${JSON.stringify(input)}`);
+          checked++;
+        }
+      }
+    }
+  }
+  assert.ok(checked >= 300, `표본이 너무 적다: ${checked}`);
+  console.log(`        (${checked}건 대조)`);
+});
+
+t("번들의 실업급여도 잘못된 입력을 조용히 통과시키지 않는다", () => {
+  const ok = { leaveDate: "2026-03-02", monthlyWage: 3e6, age: 30, insuredMonths: 12 };
+  assert.throws(() => B.calcUnemploymentBenefit({ ...ok, leaveDate: "2024-01-01" }, B.unemployment), /지원|찾을 수 없/);
+  assert.throws(() => B.calcUnemploymentBenefit({ ...ok, dailyWorkHours: 9 }, B.unemployment));
+  assert.throws(() => B.calcUnemploymentBenefit({ ...ok, age: undefined }, B.unemployment));
+});
+
+t("번들의 별표1 표가 원본과 같다", () => {
+  assert.deepStrictEqual(B.benefitDaysTable(B.unemployment), benefitDaysTable(unemployment));
 });
 
 t("정답지 4건이 번들에서도 동일하다", () => {

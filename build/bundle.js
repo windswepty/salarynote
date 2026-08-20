@@ -38,6 +38,49 @@ const readAbs = (abs) => fs.readFileSync(abs, "utf8").split(CR).join("");
 const rates = readAbs(LEDGER.ledgerPath);
 const table = readAbs(LEDGER.taxTablePath);
 assertYearMatchesContent(LEDGER, JSON.parse(rates));
+
+/**
+ * 실업급여 원장도 같은 규칙으로 연도를 따라간다.
+ * 조용히 폴백하지 않는 이유는 요율 원장과 같다 — 이 파일의 코호트는 '이직일' 로 갈리므로
+ * 2026 판을 2027년에 쓰면 2027년 이직자에게 옛 최저임금 기반 하한액이 나간다.
+ * 최저임금이 오르면 하한이 상한을 넘어설 수도 있어(2026년에 실제로 벌어질 뻔했다)
+ * 연도가 넘어갈 때는 반드시 사람이 다시 확인해야 한다.
+ */
+const unemploymentPath = path.join(ROOT, "data", `unemployment-${LEDGER.year}.json`);
+if (!fs.existsSync(unemploymentPath)) {
+  console.error(
+    `\n★실업급여 원장이 없습니다: data/unemployment-${LEDGER.year}.json★\n` +
+      `요율 원장이 ${LEDGER.year}년으로 넘어갔는데 실업급여 원장이 따라오지 않았습니다.\n` +
+      `구직급여 상·하한은 '이직일' 로 갈리고 하한은 최저임금에 연동되므로,\n` +
+      `옛 원장을 그대로 쓰면 새 연도 이직자에게 조용히 틀린 금액이 나갑니다.\n` +
+      `해결: data/unemployment-${LEDGER.year}.json 을 만들고 코호트를 추가하십시오.\n`
+  );
+  process.exit(1);
+}
+const unemployment = readAbs(unemploymentPath);
+{
+  const u = JSON.parse(unemployment);
+  if (u.year !== LEDGER.year) {
+    console.error(
+      `\n★실업급여 원장의 year(${u.year})가 파일 이름의 연도(${LEDGER.year})와 다릅니다★\n` +
+        `파일을 복사해 새 연도 원장을 만들면서 year 를 고치지 않은 전형적 실수입니다.\n`
+    );
+    process.exit(1);
+  }
+  const mw = JSON.parse(rates).minimumWage.hourly;
+  // 현행 코호트는 '끝이 열려 있는 것'이 아니라 '원장 연도와 같은 것'으로 찾는다.
+  // 예전에는 leaveDateTo === "9999-12-31" 로 판별했는데, 그 열린 끝 자체가
+  // 2027년 이직일에 2026년 값을 조용히 적용하던 결함이라 코호트를 닫았다.
+  const cur = u.cohorts.find((c) => c.leaveDateFrom.startsWith(String(LEDGER.year)));
+  if (!cur || cur.minWageHourly !== mw) {
+    console.error(
+      `\n★실업급여 원장의 최저임금(${cur && cur.minWageHourly})이 요율 원장(${mw})과 다릅니다★\n` +
+        `구직급여 하한액 = 최저임금 시급 × 1일 소정근로시간 × 80% 이므로 두 값이 어긋나면\n` +
+        `하한액이 조용히 틀립니다. data/unemployment-${LEDGER.year}.json 의 현행 코호트를 고치십시오.\n`
+    );
+    process.exit(1);
+  }
+}
 console.log(`원장: ${path.basename(LEDGER.ledgerPath)} (${LEDGER.year}년)`);
 
 /**
@@ -72,7 +115,7 @@ console.log(`원장: ${path.basename(LEDGER.ledgerPath)} (${LEDGER.year}년)`);
   }
 }
 
-const MODULES = ["insurance.js", "income-tax.js", "net-pay.js", "severance.js", "work-allowance.js", "parttime.js"];
+const MODULES = ["insurance.js", "income-tax.js", "net-pay.js", "severance.js", "work-allowance.js", "parttime.js", "unemployment.js"];
 
 const wrapped = MODULES.map((name) => {
   let src = read(path.join("src/engine", name));
@@ -101,6 +144,7 @@ ${wrapped}
   global.SalaryNote = {
     rates: ${rates},
     taxTable: ${table},
+    unemployment: ${unemployment},
     calcNetPay: __mod["net-pay.js"].calcNetPay,
     annualToMonthly: __mod["net-pay.js"].annualToMonthly,
     calcSocialInsurance: __mod["insurance.js"].calcSocialInsurance,
@@ -111,6 +155,8 @@ ${wrapped}
     calcAnnualLeave: __mod["work-allowance.js"].calcAnnualLeave,
     convertWage: __mod["work-allowance.js"].convertWage,
     calcPartTimePay: __mod["parttime.js"].calcPartTimePay,
+    calcUnemploymentBenefit: __mod["unemployment.js"].calcUnemploymentBenefit,
+    benefitDaysTable: __mod["unemployment.js"].benefitDaysTable,
   };
 })(typeof window !== "undefined" ? window : globalThis);
 `;

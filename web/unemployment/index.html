@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>실업급여 계산기 2026 | 샐러리노트</title>
+<meta name="description" content="구직급여일액과 소정급여일수를 법령 원문 기준으로 계산합니다. 이직일에 따라 상·하한이 갈리는 점, 하한액이 1일 소정근로시간에 비례하는 점까지 반영했습니다.">
+<link rel="canonical" href="https://salarynote.pages.dev/unemployment/">
+<meta property="og:title" content="실업급여 계산기 2026 | 샐러리노트">
+<meta property="og:type" content="website"><meta property="og:locale" content="ko_KR">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="brand" href="/">샐러리노트</a>
+  <nav class="nav">
+    <a href="/">연봉<span class="bar"></span></a>
+    <a href="/monthly-salary/">월급<span class="bar"></span></a>
+    <a href="/four-insurance/">4대보험<span class="bar"></span></a>
+    <a href="/severance-pay/">퇴직금<span class="bar"></span></a>
+    <a href="/weekly-holiday-pay/">주휴수당<span class="bar"></span></a>
+    <a href="/annual-leave/">연차<span class="bar"></span></a>
+    <a href="/wage-converter/">환산<span class="bar"></span></a>
+    <a href="/part-time/">알바<span class="bar"></span></a>
+    <a href="/unemployment/" aria-current="page">실업급여<span class="bar"></span></a>
+  </nav>
+  <div class="ptitle">
+  <h1>실업급여 계산기</h1>
+  <p class="sub">구직급여일액과 소정급여일수를 고용보험법 원문 그대로 계산합니다.</p>
+  </div>
+</header>
+
+<main class="content">
+<div class="card">
+  <div class="row">
+    <div class="field">
+      <label for="uiWage">이직 전 3개월 월평균임금 <span class="hint">(세전, 원)</span></label>
+      <input id="uiWage" type="text" inputmode="numeric" autocomplete="off" value="3,000,000">
+    </div>
+    <div class="field">
+      <label for="uiLeave">이직일 <span class="hint">(상·하한이 이 날짜로 갈립니다)</span></label>
+      <input id="uiLeave" type="date" min="2025-01-01" max="2026-12-31">
+    </div>
+  </div>
+  <div class="row">
+    <div class="field">
+      <label for="uiAge">이직일 현재 만 나이 <span class="hint">(세)</span></label>
+      <input id="uiAge" type="number" min="0" max="120" step="1" value="35">
+    </div>
+    <div class="field">
+      <label for="uiMonths">고용보험 총 가입기간 <span class="hint">(개월, 재직기간 아님)</span></label>
+      <input id="uiMonths" type="number" min="0" max="720" step="1" value="36">
+    </div>
+  </div>
+  <div class="row">
+    <div class="field">
+      <label for="uiHours">이직 전 1일 소정근로시간 <span class="hint">(시간, 하한액이 여기에 비례합니다)</span></label>
+      <input id="uiHours" type="number" min="0.5" max="8" step="0.5" value="8">
+    </div>
+    <div class="field">
+      <label for="uiDisabled">장애인 여부 <span class="hint">(장애인고용촉진법 제2조제1호)</span></label>
+      <select id="uiDisabled"><option value="N">해당 없음</option><option value="Y">장애인</option></select>
+    </div>
+  </div>
+</div>
+
+<div id="notices"></div>
+
+<div class="card result">
+  <div class="cap">총 예상 수령액</div>
+  <div class="big" id="out">—</div>
+  <div class="side" id="side"></div>
+</div>
+
+<div class="card">
+  <table><tbody id="breakdown"></tbody></table>
+  <details id="basisBox"><summary>계산 근거 보기</summary><div class="body"><ul id="basis"></ul></div></details>
+</div>
+
+<div class="ad"></div>
+
+<div class="card">
+  <h2>소정급여일수 표 (고용보험법 별표 1)</h2>
+  <div id="daysTable"></div>
+</div>
+
+<div class="card prose">
+  <h2>실업급여는 어떻게 계산되나요</h2>
+  <p>구직급여는 <b>구직급여일액 × 소정급여일수</b>입니다. 일액은 이직 전 평균임금으로 만든 기초일액에 법정 비율을 곱해 정하고(고용보험법 제46조제1항), 일수는 이직일 현재 연령과 고용보험 가입기간으로 위 별표 1에서 찾습니다(제50조제1항).</p>
+  <p>기초일액에는 상한과 하한이 모두 걸립니다. 상한은 대통령령이 정한 고정 금액이고(제45조제5항, 시행령 제68조제1항), 하한은 <b>이직일 당시 최저임금 시급 × 1일 소정근로시간</b>으로 계산되는 최저기초일액입니다(제45조제4항). 실제 적용된 금액과 어느 쪽이 구속했는지는 위 계산 근거에 그대로 표시됩니다.</p>
+
+  <h2>왜 이직일을 묻나요</h2>
+  <p>상한액을 정한 대통령령의 부칙이 <b>이 영 시행 전에 이직한 사람</b>에게는 종전 규정을 적용하도록 정하고 있기 때문입니다. 기준은 신청일도 수급일도 아닌 <b>이직일</b>입니다. 해가 바뀌기 직전에 퇴사하고 새해에 신청한 경우, 새해 상한이 아니라 퇴사한 해의 상한이 적용됩니다. 이직일을 묻지 않는 계산기는 이 구간에서 금액을 틀리게 보여줍니다.</p>
+
+  <h2>하한액은 모두에게 같은 금액이 아닙니다</h2>
+  <p>흔히 하한액을 하나의 고정 금액처럼 소개하지만, 법 조문은 <b>1일 소정근로시간에 비례</b>한다고 정합니다(제45조제4항). 그 고정 금액은 1일 8시간 근로자에게만 해당하고, 단시간 근로자의 하한은 그보다 낮습니다. 1일 소정근로시간을 산정하는 방법은 고용보험법 시행규칙 제91조의2에 있으며, 주 40시간 통상 근로자는 8시간으로 계산됩니다.</p>
+
+  <h2>상한과 하한이 뒤집힐 수 있나요</h2>
+  <p>구조적으로 가능합니다. 하한은 최저임금에 자동으로 연동되는데 상한은 대통령령에 적힌 고정 금액이라 자동으로 오르지 않습니다. 최저임금이 충분히 오르면 하한이 상한을 넘어섭니다. 실제로 그런 상황이 발생할 뻔했고, 정부가 상한을 인상해 해소했습니다.</p>
+  <p>만약 뒤집히면 어떻게 될까요. 제46조제2항은 산정된 구직급여일액이 최저구직급여일액보다 낮으면 <b>최저구직급여일액을 구직급여일액으로 한다</b>고만 정할 뿐, 여기에는 상한 단서가 붙어 있지 않습니다. 문언 그대로 읽으면 하한이 우선합니다. 이 계산기는 그 순서대로 계산하고, 역전 여부를 계산 근거에 함께 표시합니다. 다만 이 해석은 조문 구조에 근거한 것이고 판례로 확인된 것은 아닙니다.</p>
+
+  <h2>가입기간은 재직기간과 다릅니다</h2>
+  <p>소정급여일수를 정하는 것은 재직기간이 아니라 <b>고용보험 피보험기간</b>입니다. 종전 직장에서 자격을 잃은 날부터 3년 이내에 다시 취득했다면 종전 기간을 합산합니다(제50조제4항제1호). 다만 그 상실로 구직급여를 이미 받았다면 그 기간은 빠집니다. 현재 직장 재직기간만 넣으면 실제보다 짧게 나오니, 고용보험 홈페이지나 이직확인서로 총 가입기간을 확인해 넣으세요.</p>
+
+  <h2>얼마나 일해야 받을 수 있나요</h2>
+  <p>기준기간(원칙적으로 이직일 이전 18개월) 동안 <b>피보험 단위기간이 합산 180일 이상</b>이어야 합니다(제40조제1항제1호). 여기서 주의할 점이 있습니다. 피보험 단위기간은 재직일수가 아니라 <b>보수 지급의 기초가 된 날</b>의 합입니다(제41조제1항). 무급휴무일은 들어가지 않으므로 재직 180일이면 된다고 계산하면 틀립니다. 또 이전에 구직급여를 받은 적이 있다면 그와 관련된 상실일 이전 기간은 산입되지 않습니다(제41조제2항).</p>
+  <p>이 계산기는 이 요건을 자동으로 판정하지 않습니다. 재직일수를 피보험 단위기간으로 바꾸는 환산 계수가 법령·시행령·시행규칙 어디에도 없기 때문입니다. 추정해서 답을 내놓느니 정확한 일수를 확인하시라고 안내하는 쪽을 택했습니다.</p>
+
+  <h2>자발적 퇴사면 못 받나요</h2>
+  <p>단정할 수 없습니다. 고용보험법 제58조는 수급자격 제한 사유를 정하면서, 그 판정 주체를 <b>직업안정기관의 장</b>이라고 조문에 명시하고 있습니다. 계산기가 판정할 수 있는 사항이 아닙니다.</p>
+  <p>다만 자발적 이직이라고 자동으로 배제되는 것은 아닙니다. 고용보험법 시행규칙 별표 2가 <b>수급자격이 제한되지 않는 정당한 이직 사유</b>를 열거하고 있습니다. 임금체불, 최저임금 미달, 근로조건 저하, 위법한 연장근로, 휴업수당 부족은 <b>이직일 전 1년 이내에 2개월 이상</b> 발생한 경우로 조건이 붙어 있습니다. 그 밖에 차별대우, 성희롱, 직장 내 괴롭힘, 도산·폐업·대량감원, 경영상 사정에 따른 권고사직, 왕복 3시간 이상의 통근 곤란, 30일 이상의 가족 간병, 질병·부상으로 업무 수행이 곤란하고 휴직도 허용되지 않은 경우, 임신·출산·육아·의무복무로 휴가·휴직을 신청했으나 거부된 경우, 정년 도래나 계약기간 만료 등이 열거되어 있습니다.</p>
+  <p>각 항목마다 문언상 조건과 필요한 증빙이 다릅니다. 예를 들어 질병·부상 사유는 의사의 소견서와 사업주 의견으로 객관적으로 인정되어야 하고, 권고사직은 경영상 사정이 전제됩니다. 해당 여부는 관할 고용센터가 판단하므로, 사유에 맞는 자료를 미리 준비해 상담하시는 편이 확실합니다.</p>
+
+  <h2>언제까지 신청해야 하나요</h2>
+  <p>구직급여는 <b>이직일의 다음 날부터 12개월 안에</b> 소정급여일수를 한도로 지급합니다(제48조제1항). 여기가 가장 많이 손해 보는 지점입니다. 소정급여일수가 남아 있어도 이 12개월이 지나면 지급이 끝납니다. 신청이 늦어지면 받을 수 있었던 날 중 일부를 그대로 잃습니다. 위 결과의 수급기간 만료일을 확인하고 이직 후 지체 없이 신고하세요.</p>
+  <p>실업 신고일부터 7일간은 대기기간이라 지급되지 않습니다(제49조제1항, 건설일용근로자는 예외). 다만 소정급여일수는 대기기간이 끝난 다음 날부터 세므로(제50조제1항), 대기기간 때문에 총액이 줄지는 않습니다. 이 계산기도 총액에서 대기기간을 빼지 않습니다.</p>
+
+  <h2>이 계산기가 다루지 않는 것</h2>
+  <p>자영업자, 일용근로자, 예술인, 노무제공자는 요건과 산정 체계가 달라 포함하지 않았습니다. 훈련연장급여·개별연장급여·특별연장급여도 지급 요건이 재량 사항이라 소정급여일수에 더하지 않습니다. 조기재취업수당도 범위 밖입니다.</p>
+  <p>또 하나. 구직급여일액을 원 단위에서 절사할지 반올림할지 정한 규정이 법령에 없습니다. 고용24 공식 모의계산기는 소수점을 그대로 유지하며, 이 계산기도 같은 방식을 씁니다. 소수가 생기는 경우에는 결과에 그 사실을 함께 표시합니다.</p>
+</div>
+</main>
+
+<footer>
+  <p><!--STAMP:footer-->2026년 기준 · 국민연금 9.5%, 건강보험 7.19%, 장기요양 13.14%, 고용보험 1.8%, 최저임금 10,320원 · 자료 확인일 2026-08-18<!--/STAMP--></p>
+  <p>근거: 고용보험법 제40조·제45조·제46조·제48조·제49조·제50조·제58조 및 별표 1, 같은 법 시행령 제68조, 같은 법 시행규칙 제91조·별표 2. 참고용이며 법적 효력은 없습니다. 수급자격 인정 여부는 관할 고용센터가 결정합니다.</p>
+</footer>
+</div>
+<script src="/assets/engine.js"></script>
+<script src="/assets/app.js"></script>
+<script src="/assets/calc-page.js"></script>
+<script src="/assets/nav-transition.js"></script>
+<script>window.SN_PAGE({ mode: "unemployment" });</script>
+</body>
+</html>

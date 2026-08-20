@@ -47,10 +47,14 @@ const floorTo1000 = (n) => Math.floor((n + EPS) / 1000) * 1000;
  * 그래서 형식(정규식)과 실재성(Date 재직렬화 일치) 두 가지를 모두 확인한 뒤에만
  * 사전순 비교로 넘긴다. 통과하지 못하면 조용히 틀리는 대신 멈춘다.
  */
-function normalizePayDate(payDate) {
+function normalizePayDate(payDate, label) {
+  // label 을 받지 못하면 예전처럼 'payDate' 로 부른다.
+  // 예전에는 이 인자가 아예 없어서, 실업급여 페이지에서 이직일을 비우면
+  // 존재하지도 않는 '급여 지급일'을 고치라는 엉뚱한 안내가 떴다.
+  const NAME = label || "payDate";
   if (typeof payDate !== "string") {
     throw new Error(
-      `payDate 는 'YYYY-MM-DD' 형식의 문자열이어야 합니다. 받은 값: ${JSON.stringify(
+      `${NAME} 은(는) 'YYYY-MM-DD' 형식의 문자열이어야 합니다. 받은 값: ${JSON.stringify(
         payDate
       )} (${typeof payDate}). Date 객체나 숫자가 아니라 문자열로 넘기십시오.`
     );
@@ -58,7 +62,7 @@ function normalizePayDate(payDate) {
   const d = payDate.slice(0, 10); // 'YYYY-MM-DDTHH:mm:ss' 같은 ISO 문자열도 허용
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
     throw new Error(
-      `payDate 형식이 올바르지 않습니다: '${payDate}'. 월·일을 두 자리로 0 패딩한 'YYYY-MM-DD' 여야 합니다(예: 2026-01-15). 0 패딩이 없으면 국민연금 상·하한 구간이 조용히 잘못 선택됩니다.`
+      `${NAME} 형식이 올바르지 않습니다: '${payDate}'. 월·일을 두 자리로 0 패딩한 'YYYY-MM-DD' 여야 합니다(예: 2026-01-15). 0 패딩이 없으면 적용 구간이 조용히 잘못 선택될 수 있습니다.`
     );
   }
   const [y, m, day] = d.split("-").map(Number);
@@ -1518,6 +1522,402 @@ function calcPartTimePay(input, rates, taxTable) {
 }
 
 module.exports = { calcPartTimePay, THRESHOLD };
+
+    return module.exports;
+  })();
+
+  __mod["unemployment.js"] = (function () {
+    const module = { exports: {} };
+    /**
+ * 실업급여(구직급여) 계산 엔진
+ *
+ * 정본은 법제처 원문이다. 고용노동부 안내 페이지·블로그는 구버전일 수 있다.
+ * 모든 숫자는 data/unemployment-2026.json 에서 읽는다. 여기에 금액을 쓰지 말 것.
+ *
+ * 계산 순서 (고용보험법 제45조·제46조·별표1)
+ *  1) 평균임금일액(기초일액_raw)                       제45조제1항
+ *  2) 최저기초일액 = 이직일 당시 최저임금 시급 × 1일 소정근로시간   제45조제4항
+ *  3) 상한(대통령령) = 시행령 제68조제1항                제45조제5항
+ *  4) 기초일액 = clamp(raw, 최저기초일액, 상한)
+ *  5) 최저기초일액이 적용된 경우 ×80%, 그 외 ×60%       제46조제1항 제2호/제1호
+ *  6) 구직급여일액 = max(위 값, 최저구직급여일액)        제46조제2항
+ *  7) 소정급여일수 = 별표1[이직일 현재 연령][피보험기간]
+ *  8) 총 예상 수령액 = 구직급여일액 × 소정급여일수      (대기기간 7일은 차감하지 않는다)
+ *
+ * ★상·하한 역전★
+ * 하한은 최저임금에 자동 연동되고 상한은 시행령 고정값이라, 최저임금이 오르면
+ * 하한이 상한을 넘어설 수 있다. 실제로 2026년에 그 상황이 벌어질 뻔했고
+ * 정부가 상한을 110,000 → 113,500(구직급여일액 66,000 → 68,100)으로 올려 해소했다.
+ * 그래도 로직은 역전을 견뎌야 한다. 제46조제2항이 "제1항제1호에 따라 산정된
+ * 구직급여일액이 최저구직급여일액보다 낮은 경우에는 최저구직급여일액을 그
+ * 수급자격자의 구직급여일액으로 한다"고 무조건적으로 정하고, 최저구직급여일액에는
+ * 어떤 상한 단서도 붙어 있지 않다. 따라서 ★역전 시 하한이 이긴다.★
+ * 6단계의 max() 가 그 규칙이며, 결과에 inverted 플래그와 근거를 함께 실어 보낸다.
+ *
+ * ★이직일 분기★
+ * 대통령령 제35934호 부칙 제4조는 "이 영 시행 전에 이직한 사람"에게 종전 규정을
+ * 적용한다. 기준은 신청일·수급일이 아니라 이직일이다. 이직일을 받지 않고 2026년
+ * 값만 쓰면 2025년 이직자에게 1일 최대 2,100원을 과다 표시한다(270일이면 567,000원).
+ */
+
+const { normalizePayDate } = __req("insurance.js");
+
+const won = (n) => Math.round(n).toLocaleString("ko-KR");
+
+/** 소수 첫째 자리까지 살린다. 공식 계산기가 일액의 소수를 그대로 끌고 가기 때문이다. */
+const r2 = (n) => Math.round(n * 100) / 100;
+
+/** 소수가 있으면 보여주고 없으면 정수로. 66048.6 -> "66,048.6", 66048 -> "66,048" */
+function amt(n) {
+  const rounded = r2(n);
+  if (Number.isInteger(rounded)) return rounded.toLocaleString("ko-KR");
+  const whole = Math.trunc(rounded);
+  const frac = Math.abs(rounded - whole).toFixed(2).replace(/0+$/, "").slice(1);
+  return whole.toLocaleString("ko-KR") + frac;
+}
+
+const pad = (n) => String(n).padStart(2, "0");
+
+/** 이직일 + N년. 2/29 처럼 다음 해에 없는 날은 그 달의 마지막 날로 당긴다. */
+function addYearsClamped(dateStr, years) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const ty = y + years;
+  const lastDay = new Date(Date.UTC(ty, m, 0)).getUTCDate();
+  return `${ty}-${pad(m)}-${pad(Math.min(d, lastDay))}`;
+}
+
+/** 숫자 입력 검증. 조용히 0 으로 뭉개지 않는다. */
+function num(v, label, { min, max, required = false, integer = false } = {}) {
+  if (v === undefined || v === null || v === "") {
+    if (required) throw new Error(`${label}을(를) 입력해 주세요.`);
+    return null;
+  }
+  if (typeof v === "boolean" || Array.isArray(v)) throw new Error(`${label}: 숫자만 입력할 수 있습니다.`);
+  const n = Number(v);
+  if (!Number.isFinite(n)) throw new Error(`${label}: 숫자만 입력할 수 있습니다.`);
+  if (integer && !Number.isInteger(n)) throw new Error(`${label}은(는) 정수여야 합니다.`);
+  if (min !== undefined && n < min) throw new Error(`${label}은(는) ${min} 이상이어야 합니다.`);
+  if (max !== undefined && n > max) throw new Error(`${label}이(가) 계산 가능 범위를 벗어났습니다(최대 ${max}).`);
+  return n;
+}
+
+/**
+ * 이직일로 코호트를 고른다. 못 찾으면 조용히 최신 값을 쓰지 않고 던진다.
+ * 조용한 폴백이 바로 '2025년 이직자에게 2026년 상한을 먹이는' 사고다.
+ */
+function resolveCohort(data, leaveDate) {
+  const hit = (data.cohorts || []).find(
+    (c) => leaveDate >= c.leaveDateFrom && leaveDate <= c.leaveDateTo
+  );
+  if (!hit) {
+    const froms = (data.cohorts || []).map((c) => c.leaveDateFrom).sort();
+    const tos = (data.cohorts || []).map((c) => c.leaveDateTo).sort();
+    const earliest = froms[0];
+    const latest = tos[tos.length - 1];
+
+    // ★미래 방향도 과거와 똑같이 거부한다.★
+    // 예전에는 2026 구간이 9999-12-31 까지 열려 있어서 2027년 이직일에
+    // 2026년 최저임금·상한이 조용히 적용됐다. 2027년 최저임금(10,700원)은
+    // 이미 고시됐으므로 그 값은 명백히 틀린 금액이었고, 경고조차 없었다.
+    if (leaveDate > latest) {
+      throw new Error(
+        `이직일 ${leaveDate} 는 아직 계산할 수 없습니다. ` +
+        `${latest.slice(0, 4)}년 이후 이직에 적용될 구직급여 상한액은 시행령 개정으로 정해지는데 ` +
+        `아직 확정되지 않았습니다. 추정값으로 계산하는 대신 거부합니다. ` +
+        `이 계산기는 현재 ${earliest} ~ ${latest} 사이 이직만 지원합니다.`
+      );
+    }
+    throw new Error(
+      `이직일 ${leaveDate} 에 적용할 상·하한 기준을 원장에서 찾을 수 없습니다. ` +
+      `이 계산기는 ${earliest} ~ ${latest} 사이 이직만 지원합니다. ` +
+      `해당 연도의 시간급 최저임금과 당시 시행령 상한액을 법령 원문으로 확정하지 못했기 때문이며, ` +
+      `확인하지 못한 값으로 계산하는 대신 거부합니다.`
+    );
+  }
+  return hit;
+}
+
+/** 별표1 축 조회. 경계는 전부 '이상/미만' 이라 >= 로 위쪽 구간에 넣는다. */
+function resolveAgeBracket(table, age, disabled) {
+  if (disabled) return table.disabilityRule.treatAsBracket;
+  const brackets = table.ageAxis.brackets;
+  const hit = brackets.find(
+    (b) => (b.minAge === null || age >= b.minAge) && (b.maxAgeExclusive === null || age < b.maxAgeExclusive)
+  );
+  if (!hit) throw new Error(`별표1 연령 구간을 찾을 수 없습니다: ${age}세`);
+  return hit.id;
+}
+
+function resolvePeriodBracket(table, months) {
+  const hit = table.insuredPeriodAxis.find(
+    (b) => months >= b.minMonths && (b.maxMonthsExclusive === null || months < b.maxMonthsExclusive)
+  );
+  if (!hit) throw new Error(`별표1 피보험기간 구간을 찾을 수 없습니다: ${months}개월`);
+  return hit;
+}
+
+/**
+ * @param {object} input
+ * @param {string} input.leaveDate           이직일 'YYYY-MM-DD' (★상·하한 분기 기준★)
+ * @param {number} [input.monthlyWage]       이직 전 3개월 월평균임금(원)
+ * @param {number} [input.averageDailyWage]  평균임금일액을 직접 아는 경우 (있으면 이쪽이 우선)
+ * @param {number} input.age                 이직일 현재 만 나이
+ * @param {number} input.insuredMonths       고용보험 총 가입기간(개월)
+ * @param {number} [input.dailyWorkHours=8]  이직 전 1일 소정근로시간
+ * @param {boolean} [input.disabled=false]   장애인고용촉진법 제2조제1호 장애인 여부
+ * @param {object} data                      data/unemployment-<연도>.json
+ */
+function calcUnemploymentBenefit(input, data) {
+  if (!data || !data.cohorts || !data.durationTable || !data.rates) {
+    throw new Error("실업급여 원장(data/unemployment-*.json)이 전달되지 않았습니다.");
+  }
+  const lim = data.inputLimits;
+  const R = data.rates;
+  const table = data.durationTable;
+
+  // ── 이직일과 코호트 ──────────────────────────────────────────
+  const leaveDate = normalizePayDate(input.leaveDate, "이직일");
+  const cohort = resolveCohort(data, leaveDate);
+
+  // ── 입력 ─────────────────────────────────────────────────────
+  const age = num(input.age, "이직일 현재 만 나이", { min: 0, max: lim.maxAge, required: true, integer: true });
+  const insuredMonths = num(input.insuredMonths, "고용보험 총 가입기간(개월)", {
+    min: 0, max: lim.maxInsuredMonths, required: true,
+  });
+  const hours = input.dailyWorkHours === undefined || input.dailyWorkHours === null || input.dailyWorkHours === ""
+    ? 8
+    : num(input.dailyWorkHours, "1일 소정근로시간", { min: 0, max: lim.maxDailyWorkHours });
+  if (hours <= 0) throw new Error("1일 소정근로시간은 0보다 커야 합니다.");
+  const disabled = input.disabled === true;
+
+  const givenDaily = num(input.averageDailyWage, "평균임금일액", { min: 0, max: lim.maxMonthlyWage });
+  const monthlyWage = num(input.monthlyWage, "월평균임금", { min: 0, max: lim.maxMonthlyWage });
+  if (givenDaily === null && monthlyWage === null) {
+    throw new Error("이직 전 3개월 월평균임금 또는 평균임금일액을 입력해 주세요.");
+  }
+
+  // 평균임금일액 환산. 공식 간편계산기는 floor(월평균임금 / 30) 을 쓴다.
+  // 근로기준법 제2조제1항제6호의 정본 산식(3개월 임금총액 ÷ 총일수)과 다르므로 근거에 밝힌다.
+  const usedRule = givenDaily !== null ? "actual" : data.averageWageRule.default;
+  const rawBaseDaily = givenDaily !== null ? Math.floor(givenDaily) : Math.floor(monthlyWage / 30);
+  if (rawBaseDaily <= 0) throw new Error("임금이 0원이면 구직급여를 계산할 수 없습니다.");
+
+  // ── 기초일액 (제45조 제4항·제5항) ─────────────────────────────
+  const minWageHourly = cohort.minWageHourly;
+  const minBaseDaily = r2(minWageHourly * hours);   // 최저기초일액, 제45조제4항
+  const maxBaseDaily = cohort.maxBaseDaily;          // 상한, 제45조제5항 + 시행령 제68조제1항
+
+  const floorAppliedAtBase = rawBaseDaily < minBaseDaily;
+  const capAppliedAtBase = rawBaseDaily > maxBaseDaily;
+  // 하한을 먼저 본다. 역전 시에도 6단계 max() 가 하한을 되살리므로 결과는 같지만,
+  // 조문 순서(제45조제4항 → 제5항)와 표시 근거를 일치시킨다.
+  const baseDaily = floorAppliedAtBase ? minBaseDaily : (capAppliedAtBase ? maxBaseDaily : rawBaseDaily);
+
+  // ── 구직급여일액 (제46조) ────────────────────────────────────
+  const minDaily = r2(minBaseDaily * R.dailyMin);   // 최저구직급여일액, 제46조제1항제2호
+  const maxDaily = r2(maxBaseDaily * R.daily);      // 상한이 구속했을 때의 일액 (파생값)
+  const inverted = minDaily > maxDaily;             // ★상·하한 역전★
+
+  const beforeFloor = floorAppliedAtBase
+    ? r2(baseDaily * R.dailyMin)   // 제46조제1항제2호
+    : r2(baseDaily * R.daily);     // 제46조제1항제1호
+
+  // 제46조제2항 — 최종 단계에서 하한이 무조건 덮어쓴다. 역전 시 하한이 이기는 지점이다.
+  const floorOverrode = beforeFloor < minDaily;
+  const dailyAmount = r2(Math.max(beforeFloor, minDaily));
+
+  const floorBinding = floorAppliedAtBase || floorOverrode || dailyAmount === minDaily;
+  const capBinding = !floorBinding && capAppliedAtBase;
+  const bound = floorBinding ? "하한" : capBinding ? "상한" : "없음";
+
+  // ── 소정급여일수 (제50조제1항, 별표1) ────────────────────────
+  const ageBracketId = resolveAgeBracket(table, age, disabled);
+  const periodBracket = resolvePeriodBracket(table, insuredMonths);
+  const days = table.days[ageBracketId][periodBracket.id];
+  if (typeof days !== "number") {
+    throw new Error(`별표1에 해당 칸이 없습니다: ${ageBracketId} / ${periodBracket.id}`);
+  }
+  const ageBracketLabel = disabled
+    ? "장애인 (별표1 비고에 따라 50세 이상 적용)"
+    : table.ageAxis.brackets.find((b) => b.id === ageBracketId).label;
+
+  // ── 총액 ─────────────────────────────────────────────────────
+  // 대기기간 7일은 차감하지 않는다. 제50조제1항이 소정급여일수를 대기기간이
+  // 끝난 다음 날부터 기산하기 때문이다(공식 모의계산기 실측도 동일).
+  const totalAmount = Math.round(days * dailyAmount);
+
+  // ── 수급기간 (제48조제1항) ───────────────────────────────────
+  // 이직일 다음 날부터 12개월. 민법 제157조·제160조에 따라 만료일은 이직일 + 1년.
+  const benefitWindowEnd = addYearsClamped(leaveDate, 1);
+
+  // ── 경고 ─────────────────────────────────────────────────────
+  const warnings = [];
+
+  if (inverted) {
+    warnings.push(
+      `이 조건에서는 최저구직급여일액(${amt(minDaily)}원)이 상한이 구속했을 때의 일액(${amt(maxDaily)}원)보다 큽니다. ` +
+      `고용보험법 제46조제2항이 최종 단계에서 최저구직급여일액을 무조건 적용하도록 정하고 있어 하한이 우선합니다. ` +
+      `다만 이 해석은 조문 구조에 근거한 것이며 판례·행정해석으로 확인된 것은 아닙니다.`
+    );
+  }
+
+  warnings.push(
+    `상·하한 기준은 ★이직일★ 로 갈립니다(대통령령 제35934호 부칙 제4조). ` +
+    `이직일 ${leaveDate} 기준으로 ${cohort.label} 구간을 적용했습니다. 신청일·수급일이 아닙니다.`
+  );
+
+  if (hours !== 8) {
+    warnings.push(
+      `하한액은 1일 소정근로시간에 비례합니다(고용보험법 제45조제4항). ` +
+      `${hours}시간 기준 하한은 ${amt(minDaily)}원이며, 흔히 인용되는 8시간 기준 금액과 다릅니다. ` +
+      `1일 소정근로시간 산정 방법은 고용보험법 시행규칙 제91조의2에 따릅니다(주 40시간 통상 근로자는 8시간).`
+    );
+  }
+
+  if (!Number.isInteger(dailyAmount)) {
+    warnings.push(
+      `구직급여일액의 원 단위 단수처리(절사/반올림)를 정한 규정이 법령에 없습니다. ` +
+      `고용24 공식 모의계산기와 동일하게 소수를 그대로 두었습니다. 실제 지급액과 원 단위에서 다를 수 있습니다.`
+    );
+  }
+
+  warnings.push(
+    `소정급여일수는 '고용보험 총 가입기간'으로 정해집니다. 현재 직장 재직기간이 아닙니다. ` +
+    `종전 직장 상실일부터 3년 이내에 재취업했다면 종전 피보험기간을 합산합니다(제50조제4항제1호). ` +
+    `다만 그 상실로 구직급여를 받은 적이 있으면 그 기간은 제외됩니다.`
+  );
+
+  warnings.push(
+    `이 금액은 수급자격이 인정된 경우의 상한선입니다. ` +
+    `기준기간(이직일 이전 18개월) 동안 피보험 단위기간이 합산 ${data.periods.insuredUnitDaysMin}일 이상이어야 합니다(제40조제1항제1호). ` +
+    `피보험 단위기간은 재직일수가 아니라 '보수 지급의 기초가 된 날'의 합이므로(제41조제1항), ` +
+    `정확한 일수는 이직확인서나 고용보험 홈페이지에서 확인하세요.`
+  );
+
+  if (insuredMonths < 7) {
+    warnings.push(
+      `가입기간이 ${insuredMonths}개월이면 피보험 단위기간 ${data.periods.insuredUnitDaysMin}일 요건을 채우지 못했을 가능성이 큽니다. ` +
+      `요건 미달이면 소정급여일수와 무관하게 구직급여가 지급되지 않습니다.`
+    );
+  }
+
+  warnings.push(
+    `이직 사유가 수급자격 제한 사유(제58조)에 해당하는지는 이 계산기가 판정하지 않습니다. ` +
+    `제58조 본문이 판정 주체를 '직업안정기관의 장'으로 명시하고 있습니다. 최종 판단은 관할 고용센터가 합니다.`
+  );
+
+  warnings.push(
+    `수급기간은 이직일 다음 날부터 12개월입니다(제48조제1항). 이 건의 만료일은 ${benefitWindowEnd} 입니다. ` +
+    `소정급여일수가 남아 있어도 이 날짜가 지나면 지급이 끝나므로, 이직 후 지체 없이 신고해야 합니다. ` +
+    `대기기간 ${data.periods.waitingDays}일은 실업 신고일부터 기산하며(제49조제1항) 총액에서 차감하지 않습니다.`
+  );
+
+  if (age >= 65) {
+    warnings.push(
+      `65세 이후에 새로 고용된 사람에게는 실업급여(제4장)가 적용되지 않습니다(제10조제2항). ` +
+      `다만 65세 전부터 피보험자격을 유지하다가 계속 고용된 경우는 제외되므로 적용 대상입니다.`
+    );
+  }
+
+  if (usedRule === "divide30") {
+    warnings.push(
+      `평균임금일액을 월평균임금 ÷ 30 으로 환산했습니다(고용24 공식 간편계산기와 동일한 규칙). ` +
+      `근로기준법 제2조제1항제6호의 정본 산식은 '이직 전 3개월 임금총액 ÷ 그 기간의 총일수(89~92일)' 이므로 실제 값과 다를 수 있습니다.`
+    );
+  }
+
+  warnings.push(
+    `자영업자·일용근로자·예술인·노무제공자는 산정 체계가 달라 이 계산기의 범위가 아닙니다. ` +
+    `연장급여(훈련·개별·특별)도 지급 요건이 재량 사항이라 포함하지 않았습니다.`
+  );
+
+  return {
+    cohortId: cohort.id,
+    cohortLabel: cohort.label,
+    leaveDate,
+    dailyWorkHours: hours,
+
+    averageWageRule: usedRule,
+    rawBaseDaily,
+    minBaseDaily,
+    maxBaseDaily,
+    baseDaily,
+
+    minDaily,
+    maxDaily,
+    dailyAmount,
+    dailyAmountIsFractional: !Number.isInteger(dailyAmount),
+    bound,
+    floorBinding,
+    capBinding,
+    inverted,
+
+    ageBracket: ageBracketId,
+    ageBracketLabel,
+    periodBracket: periodBracket.id,
+    periodBracketLabel: periodBracket.label,
+    days,
+    totalAmount,
+
+    benefitWindowEnd,
+    waitingDays: data.periods.waitingDays,
+
+    warnings,
+    basis: {
+      "적용 기준(이직일)": `${leaveDate} → ${cohort.label}. 근거: ${cohort.maxBaseDailyDecree}. ` +
+        `분기 기준은 신청일이 아니라 이직일이다(대통령령 제35934호 부칙 제4조).`,
+      "평균임금일액": usedRule === "divide30"
+        ? `월평균임금 ${won(monthlyWage)}원 ÷ 30 = ${won(rawBaseDaily)}원 (${data.averageWageRule.official.note})`
+        : `직접 입력 ${won(rawBaseDaily)}원 (${data.averageWageRule.statutory.basis})`,
+      "최저기초일액": `최저임금 시급 ${won(minWageHourly)}원 × 1일 소정근로시간 ${hours}시간 = ${amt(minBaseDaily)}원 ` +
+        `(고용보험법 제45조제4항, 이직일 당시 최저임금 기준)`,
+      "기초일액 상한": `${won(maxBaseDaily)}원 (${cohort.maxBaseDailyBasis})`,
+      "기초일액": floorAppliedAtBase
+        ? `${won(rawBaseDaily)}원 < 최저기초일액 ${amt(minBaseDaily)}원 → 최저기초일액 적용 (제45조제4항)`
+        : capAppliedAtBase
+          ? `${won(rawBaseDaily)}원 > 상한 ${won(maxBaseDaily)}원 → 상한 적용 (제45조제5항)`
+          : `${won(rawBaseDaily)}원 (상·하한 사이라 그대로 적용)`,
+      "구직급여일액": floorAppliedAtBase
+        ? `${amt(baseDaily)} × ${R.dailyMin * 100}% = ${amt(beforeFloor)}원 (제46조제1항제2호, 최저구직급여일액)`
+        : `${amt(baseDaily)} × ${R.daily * 100}% = ${amt(beforeFloor)}원 (제46조제1항제1호)`,
+      "하한 비교(제46조제2항)": floorOverrode
+        ? `${amt(beforeFloor)}원 < 최저구직급여일액 ${amt(minDaily)}원 → 최저구직급여일액을 적용한다.`
+        : `${amt(beforeFloor)}원 ≥ 최저구직급여일액 ${amt(minDaily)}원 → 그대로 적용한다.`,
+      "상·하한 역전 여부": inverted
+        ? `★역전★ 하한 ${amt(minDaily)}원 > 상한 ${amt(maxDaily)}원. ` +
+          `제46조제2항에는 상한 단서가 없어 하한이 우선한다. 적용 일액 ${amt(dailyAmount)}원.`
+        : `역전 없음. 상한 ${amt(maxDaily)}원 > 하한 ${amt(minDaily)}원 (여유 ${amt(r2(maxDaily - minDaily))}원). ` +
+          `하한은 최저임금에 연동되고 상한은 시행령 고정값이라, 최저임금이 오르면 다시 좁아진다.`,
+      "적용 구속": bound === "하한"
+        ? `하한 구속 — 구직급여일액이 최저구직급여일액 ${amt(minDaily)}원으로 결정됐다.`
+        : bound === "상한"
+          ? `상한 구속 — 기초일액 상한 ${won(maxBaseDaily)}원이 적용되어 일액이 ${amt(maxDaily)}원으로 묶였다.`
+          : `구속 없음 — 상·하한 사이 구간이다.`,
+      "소정급여일수": `${ageBracketLabel} × ${periodBracket.label}(가입 ${insuredMonths}개월) = ${days}일 ` +
+        `(${table.basis})`,
+      "총 예상 수령액": `${amt(dailyAmount)}원 × ${days}일 = ${won(totalAmount)}원 ` +
+        `(대기기간 ${data.periods.waitingDays}일은 차감하지 않는다 — 제50조제1항)`,
+      "수급기간 만료일": `${benefitWindowEnd} (이직일 다음 날부터 12개월, 제48조제1항)`,
+    },
+  };
+}
+
+/** 별표1 전체를 화면에 그대로 보여줄 때 쓴다. 숫자를 HTML 에 손으로 적지 않기 위한 통로다. */
+function benefitDaysTable(data) {
+  const t = data.durationTable;
+  return {
+    title: t.title,
+    basis: t.basis,
+    remark: t.remark,
+    columns: t.insuredPeriodAxis.map((b) => b.label),
+    rows: t.ageAxis.brackets.map((a) => ({
+      label: a.label,
+      days: t.insuredPeriodAxis.map((b) => t.days[a.id][b.id]),
+    })),
+  };
+}
+
+module.exports = { calcUnemploymentBenefit, benefitDaysTable, resolveCohort };
 
     return module.exports;
   })();
@@ -11451,6 +11851,273 @@ module.exports = { calcPartTimePay, THRESHOLD };
   "zeroCells": "원문에서 '-'로 표기된 칸은 세액 0원."
  }
 },
+    unemployment: {
+ "$comment": "실업급여(구직급여) 계산 원장. 이 파일 외의 곳에 숫자를 하드코딩하지 말 것. 4대보험 요율 원장(rates-2026.json)과 분리한 이유는 갱신 주기와 근거 법령이 다르기 때문이다(요율은 매년 1월, 구직급여 상한은 시행령 개정 시점에만 바뀐다).",
+ "label": "고용보험 구직급여(실업급여)",
+ "year": 2026,
+ "lastVerified": "2026-08-20",
+ "law": {
+  "$comment": "정본은 법제처 국가법령정보센터 원문이다. 고용노동부 안내 웹페이지·블로그를 근거로 이 파일을 고치지 말 것.",
+  "act": {
+   "name": "고용보험법",
+   "mst": "283373",
+   "promulgated": "2026-02-19",
+   "promulgationNo": "법률 제21372호",
+   "effectiveFrom": "2026-08-20",
+   "source": "https://www.law.go.kr/DRF/lawService.do?OC=test&target=law&MST=283373&type=JSON",
+   "sourceHuman": "https://www.law.go.kr/법령/고용보험법"
+  },
+  "decree": {
+   "name": "고용보험법 시행령",
+   "mst": "287489",
+   "effectiveFrom": "2026-07-01",
+   "source": "https://www.law.go.kr/DRF/lawService.do?OC=test&target=law&MST=287489&type=JSON",
+   "sourceHuman": "https://www.law.go.kr/법령/고용보험법시행령"
+  },
+  "rule": {
+   "name": "고용보험법 시행규칙",
+   "mst": "288723",
+   "source": "https://www.law.go.kr/DRF/lawService.do?OC=test&target=law&MST=288723&type=JSON",
+   "sourceHuman": "https://www.law.go.kr/법령/고용보험법시행규칙"
+  },
+  "oracle": {
+   "$comment": "고용24 공식 모의계산기 실측 정답지. test/unemployment.test.js 가 이 파일을 픽스처로 쓴다.",
+   "path": "data/sources/unemployment-official-oracle-2026.json",
+   "capturedAt": "2026-08-20",
+   "endpoint": "https://www.work24.go.kr/cm/c/f/1100/selecSimulate.do"
+  }
+ },
+ "rates": {
+  "label": "구직급여일액 산정 비율",
+  "daily": 0.6,
+  "dailyBasis": "고용보험법 제46조제1항제1호: 제45조제1항부터 제3항까지 및 제5항의 경우 기초일액에 100분의 60을 곱한 금액.",
+  "dailyMin": 0.8,
+  "dailyMinBasis": "고용보험법 제46조제1항제2호: 제45조제4항의 경우 기초일액에 100분의 80을 곱한 금액(= 최저구직급여일액).",
+  "amended": "2019-08-27",
+  "effectiveFrom": "2019-10-01",
+  "note": "2019.10.1 시행 전에는 각각 50% / 90% 였다(개정 전 원문 MST=206705 확인). 같은 개정에서 기초일액 상한을 132,000 -> 110,000 으로 내려 구직급여일액 상한 66,000원을 유지시켰다.",
+  "source": "https://www.law.go.kr/DRF/lawService.do?OC=test&target=law&MST=283373&JO=004600&type=JSON",
+  "$floorWinsOnInversion": "★역전 시 하한이 이긴다.★ 상한(제45조제5항)은 '기초일액' 단계에서 작동하고, 제46조제2항이 최종 단계에서 '제1항제1호에 따라 산정된 구직급여일액이 최저구직급여일액보다 낮은 경우에는 최저구직급여일액을 그 수급자격자의 구직급여일액으로 한다'고 무조건적으로 덮어쓴다. 최저구직급여일액에는 어떤 상한 단서도 붙어 있지 않다. 다만 이는 조문 구조에 대한 해석이며 판례·행정해석 원문으로 확인한 것은 아니다. 2026년에는 역전이 발생하지 않으므로 실무 계산에 영향이 없다($openIssues.inversionInterpretation 참조).",
+  "grade": "법률(제46조)"
+ },
+ "$cohortComment": "★분기 기준은 신청일·수급일이 아니라 '이직일' 이다.★ 대통령령 제35934호 부칙 제4조: '이 영 시행 전에 이직한 사람의 구직급여의 산정 기초가 되는 임금일액 및 구직급여일액은 ... 종전의 규정에 따른다.' 이직일을 받지 않고 2026년 값만 쓰면 2025년 이직자에게 1일 최대 2,100원, 소정급여일수 270일 기준 567,000원을 과다 표시한다.",
+ "cohorts": [
+  {
+   "id": "2026",
+   "label": "2026년 1월 1일 이후 이직",
+   "leaveDateFrom": "2026-01-01",
+   "leaveDateTo": "2026-12-31",
+   "maxBaseDaily": 113500,
+   "maxBaseDailyBasis": "고용보험법 제45조제5항 및 같은 법 시행령 제68조제1항: '구직급여의 산정 기초가 되는 임금일액이 11만3500원을 초과하는 경우에는 11만3500원을 해당 임금일액으로 한다.' <개정 2025.12.23>",
+   "maxBaseDailyDecree": "대통령령 제35934호 (공포 2025-12-23, 시행 2026-01-01)",
+   "maxBaseDailySource": "https://www.law.go.kr/DRF/lawService.do?OC=test&target=law&MST=287489&JO=006800&type=JSON",
+   "maxBaseDailyCrossCheck": "시행령 제104조의8제4항(예술인)·제104조의15제4항(노무제공자)에 파생값 '6만8100원'이 직접 명시되어 있어 113,500 x 60% = 68,100 이 교차검증된다.",
+   "minWageHourly": 10320,
+   "minWageBasis": "고용보험법 제45조제4항: 최저기초일액 = 이직 전 1일 소정근로시간 x '이직일 당시 적용되던' 최저임금법에 따른 시간 단위 최저임금액. 수급 시점·신청 시점의 최저임금이 아니다.",
+   "minWageDecree": "고용노동부 고시 제2025-47호 (2025-08-05)",
+   "minWageSource": "https://www.moel.go.kr/info/lawinfo/instruction/view.do?bbs_seq=20250800121",
+   "minWageLedgerPath": "minimumWage.hourly",
+   "$minWageLedgerNote": "이 값은 data/rates-2026.json 의 minimumWage.hourly 와 반드시 같아야 한다. test/unemployment.test.js 가 대조한다. 두 파일이 어긋나면 조용히 틀린 하한액이 나간다.",
+   "$derivedCheck": {
+    "$comment": "파생값이다. 원장에 정본으로 두지 않고 엔진이 계산한 뒤 테스트로 대조한다. 68,100 만 하드코딩하면 시행령이 바뀔 때 조용히 틀린다.",
+    "maxDaily": 68100,
+    "maxDailyFormula": "113500 x 0.6",
+    "minBaseDaily8h": 82560,
+    "minBaseDaily8hFormula": "10320 x 8",
+    "minDaily8h": 66048,
+    "minDaily8hFormula": "10320 x 8 x 0.8",
+    "inversionMargin": 2052,
+    "inversionMarginNote": "68,100 - 66,048 = 2,052원. 2026년에는 상·하한 역전이 발생하지 않는다."
+   },
+   "$history": "구 상한 66,000원(기초일액 110,000)을 2026년에 그대로 쓰면 하한 66,048원에 역전된다. 정부가 바로 그 역전을 방지하기 위해 상한을 인상했다(입법예고문: '구직급여 하한액의 최저임금 연동으로 인한 상·하한 역전을 방지'). 66,000원은 2025.12.31 이전 이직자 전용값이다."
+  },
+  {
+   "id": "2025",
+   "label": "2025년 이직 (경과조치 적용)",
+   "leaveDateFrom": "2025-01-01",
+   "leaveDateTo": "2025-12-31",
+   "maxBaseDaily": 110000,
+   "maxBaseDailyBasis": "고용보험법 시행령 제68조제1항 종전 규정(대통령령 제29996호, 2019.9.17 개정, 2019.10.1 시행). 대통령령 제35934호 부칙 제4조 경과조치에 따라 2026.1.1 이전 이직자에게 계속 적용된다.",
+   "maxBaseDailyDecree": "대통령령 제35934호 부칙 제4조 (경과조치)",
+   "maxBaseDailySource": "https://www.law.go.kr/DRF/lawService.do?OC=test&target=law&MST=210502&type=JSON",
+   "minWageHourly": 10030,
+   "minWageBasis": "2025년 시간급 최저임금. 고용보험법 제45조제4항의 '이직일 당시 적용되던' 최저임금이다.",
+   "minWageLedgerPath": "rates-history.json:minimumWageHourly.2025",
+   "$minWageLedgerNote": "data/rates-history.json 의 minimumWageHourly['2025'] 와 반드시 같아야 한다. test/unemployment.test.js 가 대조한다.",
+   "$derivedCheck": {
+    "maxDaily": 66000,
+    "maxDailyFormula": "110000 x 0.6",
+    "minBaseDaily8h": 80240,
+    "minDaily8h": 64192,
+    "minDaily8hFormula": "10030 x 8 x 0.8",
+    "inversionMargin": 1808
+   }
+  }
+ ],
+ "$cohortLimit": "2025-01-01 이전 이직일은 지원하지 않는다. 연도별 시간급 최저임금(2024년 이하)을 이 원장에서 정본으로 확정하지 않았고, 이직일 다음 날부터 12개월인 수급기간(제48조제1항)이 이미 지났을 가능성이 높기 때문이다. 확인하지 못한 값으로 계산하느니 거부한다.",
+ "durationTable": {
+  "label": "구직급여의 소정급여일수",
+  "basis": "고용보험법 제50조제1항 및 별표 1 (개정 2019. 8. 27., 시행 2019. 10. 1.)",
+  "title": "구직급여의 소정급여일수(제50조제1항 관련)",
+  "amendingAct": "법률 제16557호 (공포 2019-08-27, 시행 2019-10-01)",
+  "unchangedThrough": "2028-01-01",
+  "$unchangedNote": "시행예정 버전 4개(2026-09-18 / 2026-11-27 / 2027-01-01 / 2028-01-01)를 모두 조회해 별표1 내용을 비교했다. 네 버전 모두 글자 하나까지 동일하다.",
+  "source": "https://www.law.go.kr/DRF/lawService.do?OC=test&target=law&MST=283373&type=JSON",
+  "sourcePdf": "data/sources/고용보험법_별표1_소정급여일수_20260820.pdf",
+  "startsFrom": "대기기간이 끝난 다음 날",
+  "startsFromBasis": "고용보험법 제50조제1항",
+  "ageAxis": {
+   "referenceDate": "이직일 현재 연령",
+   "$referenceNote": "별표1 표 좌측 항목명이 그 자체로 '이직일 현재 연령'이다. 수급자격 인정일도 신청일도 아니다.",
+   "brackets": [
+    {
+     "id": "under50",
+     "label": "50세 미만",
+     "minAge": null,
+     "maxAgeExclusive": 50
+    },
+    {
+     "id": "age50plus",
+     "label": "50세 이상",
+     "minAge": 50,
+     "maxAgeExclusive": null
+    }
+   ]
+  },
+  "insuredPeriodAxis": [
+   {
+    "id": "lt1y",
+    "label": "1년 미만",
+    "minMonths": 0,
+    "maxMonthsExclusive": 12
+   },
+   {
+    "id": "y1to3",
+    "label": "1년 이상 3년 미만",
+    "minMonths": 12,
+    "maxMonthsExclusive": 36
+   },
+   {
+    "id": "y3to5",
+    "label": "3년 이상 5년 미만",
+    "minMonths": 36,
+    "maxMonthsExclusive": 60
+   },
+   {
+    "id": "y5to10",
+    "label": "5년 이상 10년 미만",
+    "minMonths": 60,
+    "maxMonthsExclusive": 120
+   },
+   {
+    "id": "y10plus",
+    "label": "10년 이상",
+    "minMonths": 120,
+    "maxMonthsExclusive": null
+   }
+  ],
+  "$axisNote": "모든 경계가 '이상/미만' 이다. 구현에서 반드시 >= 로 위쪽(긴 쪽) 구간에 넣어야 한다. > 로 잘못 쓰면 정확히 경계에 걸린 사용자에게 한 구간 낮은 일수가 나간다.",
+  "days": {
+   "under50": {
+    "lt1y": 120,
+    "y1to3": 150,
+    "y3to5": 180,
+    "y5to10": 210,
+    "y10plus": 240
+   },
+   "age50plus": {
+    "lt1y": 120,
+    "y1to3": 180,
+    "y3to5": 210,
+    "y5to10": 240,
+    "y10plus": 270
+   }
+  },
+  "remark": "「장애인고용촉진 및 직업재활법」 제2조제1호에 따른 장애인은 50세 이상인 것으로 보아 위 표를 적용한다.",
+  "disabilityRule": {
+   "treatAsBracket": "age50plus",
+   "basis": "고용보험법 별표1 비고"
+  }
+ },
+ "periods": {
+  "label": "기간 규정",
+  "waitingDays": 7,
+  "waitingDaysBasis": "고용보험법 제49조제1항: 실업의 신고일부터 계산하기 시작하여 7일간은 대기기간으로 보아 구직급여를 지급하지 아니한다. 기산점이 이직일이 아니라 '실업 신고일' 이다.",
+  "waitingDaysException": "최종 이직 당시 건설일용근로자였던 사람은 대기기간 없이 실업 신고일부터 지급한다(제49조제1항 단서).",
+  "benefitWindowMonths": 12,
+  "benefitWindowBasis": "고용보험법 제48조제1항: 이직일의 다음 날부터 계산하기 시작하여 12개월 내에 소정급여일수를 한도로 지급한다.",
+  "benefitWindowExtendMaxYears": 4,
+  "benefitWindowExtendBasis": "고용보험법 제48조제2항: 임신·출산·육아 등 대통령령으로 정하는 사유로 취업할 수 없어 신고한 경우 12개월에 그 기간을 가산(4년 초과 시 4년).",
+  "insuredUnitDaysMin": 180,
+  "insuredUnitDaysBasis": "고용보험법 제40조제1항제1호: 기준기간 동안의 피보험 단위기간이 합산하여 180일 이상일 것. 피보험 단위기간은 재직일수가 아니라 '보수 지급의 기초가 된 날'의 합이다(제41조제1항).",
+  "$waitingNotDeducted": "총액 = 소정급여일수 x 구직급여일액 이다. 대기기간 7일은 총액에서 차감하지 않는다. 제50조제1항이 소정급여일수를 '대기기간이 끝난 다음 날부터' 기산한다고 정하기 때문이다. 공식 모의계산기 실측도 차감하지 않는다."
+ },
+ "inputLimits": {
+  "label": "입력 방어 한계값",
+  "$comment": "★법정 수치가 아니다.★ 오입력과 부동소수점 오버플로를 막기 위한 공학적 방어값이다.",
+  "maxMonthlyWage": 1000000000,
+  "maxMonthlyWageNote": "월 10억원. 기초일액 상한이 있어 결과에는 영향이 없지만, 무한대·NaN 이 조용히 흘러드는 것을 막는다.",
+  "maxAge": 120,
+  "maxInsuredMonths": 720,
+  "maxInsuredMonthsNote": "60년. 이보다 긴 피보험기간은 오입력이다.",
+  "maxDailyWorkHours": 8,
+  "maxDailyWorkHoursNote": "근로기준법 제50조제2항이 1일 소정근로시간을 8시간으로 제한하므로 8시간을 초과하는 '소정' 근로시간은 성립할 수 없다고 보았다. 고용24 공식 모의계산기도 입력 범위를 1~8시간으로 제한한다. 다만 고용보험법 시행규칙 제91조의2에 8시간 상한을 명시한 문언은 없다($openIssues.dailyWorkHoursCap 참조).",
+  "grade": "공학적 방어값(법령 근거 없음). maxDailyWorkHours 만 근로기준법 제50조제2항에서 유도한 값이다."
+ },
+ "dailyWorkHoursRule": {
+  "label": "1일 소정근로시간 산정 방법",
+  "basis": "고용보험법 시행규칙 제91조의2 (법 제45조제4항 후단 위임)",
+  "source": "https://www.law.go.kr/DRF/lawService.do?OC=test&target=law&MST=288723&type=JSON",
+  "methods": [
+   "일(日) 단위로 정해진 경우: 해당 소정근로시간",
+   "주(週) 단위: (주 소정근로시간 + 해당 기간 유급휴일의 소정근로시간 합계) ÷ 48시간 × 8시간",
+   "월 단위: (월 소정근로시간 + 해당 기간 유급휴일의 소정근로시간 합계) ÷ 209시간 × 8시간",
+   "주마다 다른 경우: (이직 전 4주 동안의 소정근로시간 + 해당 기간 유급휴일의 소정근로시간 합계) ÷ 28"
+  ],
+  "standardCase": "주 40시간 통상 근로자: (40 + 8) ÷ 48 × 8 = 8시간",
+  "$note": "★하한은 66,048원 고정이 아니다.★ 1일 소정근로시간에 비례한다. 8시간 근로자만 66,048원이고 4시간 근로자는 33,024원이다. 시중 블로그 대부분이 이 오류를 범하고 있으므로 그것들을 근거로 삼지 말 것."
+ },
+ "averageWageRule": {
+  "label": "평균임금일액 환산 규칙",
+  "$comment": "두 규칙이 있고 결과가 다르다. 사용자에게 어느 쪽을 썼는지 반드시 노출해야 한다.",
+  "official": {
+   "id": "divide30",
+   "formula": "floor(월평균임금 ÷ 30)",
+   "note": "고용24 공식 간편 모의계산기가 쓰는 환산(페이지 JS fn_calcPay 에서 확인). 공식 계산기와 값을 맞추려면 이 규칙을 써야 한다.",
+   "grade": "행정 실무(공식 모의계산기 관측). 법령 규정이 아니다."
+  },
+  "statutory": {
+   "id": "actual",
+   "formula": "이직 전 3개월간 임금 총액 ÷ 그 기간의 총일수(89~92일)",
+   "basis": "근로기준법 제2조제1항제6호 (고용보험법 제45조제1항이 준용)",
+   "note": "실제 수급자격 인정 시 고용센터가 쓰는 정본 산식이다. 사용자가 3개월 임금총액과 총일수를 알고 있다면 이 값을 직접 입력하는 편이 정확하다.",
+   "grade": "법률"
+  },
+  "default": "divide30"
+ },
+ "notCovered": {
+  "$comment": "★이 계산기가 다루지 않는 것.★ 요건·산정 체계가 달라 같은 화면에서 섞으면 조용히 틀린다.",
+  "selfEmployed": "자영업자(제69조의6, 별표2: 1~3년 120일 / 3~5년 150일 / 5~10년 180일 / 10년 이상 210일). 별표2에 '1년 미만' 칸이 아예 없어 1년 미만 자영업자의 일수를 알 수 없다. 수급자격 자체가 없는 것인지 확인 전까지 제공하지 않는다.",
+  "artistAndWorker": "예술인(제77조의3, 시행령 제104조의8)·노무제공자(시행령 제104조의15). 구직급여일액 상한은 68,100원으로 같지만 보수일액 기반이며 최저임금 연동 하한이 적용되지 않는다. 분기 없이 처리하면 하한을 잘못 적용한다.",
+  "dailyWorker": "일용근로자. 제40조제1항제5호·제6호의 별도 요건이 붙고, 제45조제2항의 통상임금 하한이 적용되지 않는다.",
+  "extendedBenefits": "훈련연장급여(제51조, 일액 100%)·개별연장급여(제52조, 60일 범위, 일액 70%)·특별연장급여(제53조, 60일 범위, 일액 70%). 지급 요건이 재량·행정처분 사항이라 소정급여일수에 더해 표시하면 안 된다.",
+  "earlyReemployment": "조기재취업수당(제64조).",
+  "eligibilityJudgement": "이직 사유에 따른 수급자격 제한(제58조) 판정. 제58조 본문이 판정 주체를 '직업안정기관의 장'으로 명시한다. 계산기는 판정하지 않고 안내만 한다.",
+  "insuredUnitDaysConversion": "재직일수 -> 피보험 단위기간(180일) 자동 환산. 환산 계수는 법령·시행령·시행규칙 어디에도 없다."
+ },
+ "$openIssues": {
+  "rounding": "구직급여일액의 원 단위 단수처리 규정이 법령에 없다. 고용24 공식 계산기는 소수점을 그대로 유지한다(기초일액 110,081 -> 일액 66,048.6원, 150일 총액 9,907,290원). 실무 지급 시 절사인지 반올림인지 확인하지 못했다. 엔진은 공식 계산기와 동일하게 소수를 유지하고, 화면에는 그 사실을 함께 표시한다.",
+  "dailyWorkHoursFraction": "고용보험법 시행규칙 제91조의2제2항이 위임한 고용노동부장관 고시(1일 소정근로시간 산정 세부사항, 특히 소수점 처리)를 확보하지 못했다. 소정근로시간이 8시간으로 딱 떨어지지 않는 단시간 근로자의 하한액 원 단위 처리 규칙이 미확정이다.",
+  "dailyWorkHoursCap": "1일 소정근로시간의 상한이 8시간이라는 명문 규정을 고용보험법령에서 찾지 못했다. 시행규칙 제91조의2제1호('일 단위로 정해진 경우: 해당 소정근로시간')는 상한을 두지 않는다. 근로기준법 제50조제2항에서 유도한 추론이며, 공식 모의계산기의 입력 범위(1~8)와 일치한다.",
+  "ageIsKoreanFullAge": "별표1의 '50세'가 만 나이인지 법령 원문에 명시가 없다. 별표1은 '이직일 현재 연령'이라고만 쓴다. 민법 제158조 만 나이 원칙에 따른 추론이다. 화면에는 '이직일 현재 만 나이 기준'이라 쓰되 근거는 별표1 문구로 표기한다.",
+  "inversionInterpretation": "역전 시 하한이 상한을 무력화한다는 해석(제46조제2항의 무조건적 문언)은 조문 구조에 근거한 해석이며 판례·행정해석 원문으로 확인하지 못했다. ★유효기간 2026-12-31.★ 2026년에는 역전이 발생하지 않아 실무 계산에 영향이 없지만, 2027년 역전이 실현되면 이 미확인 해석이 전 사용자의 금액을 결정하는 규칙으로 승격된다. 하한 우선이면 68,480원, 상한 우선이면 68,100원으로 갈리며 270일 기준 차액이 102,600원이다. 2027 코호트를 만들기 전에 고용노동부 행정해석으로 확정하거나, 확정하지 못하면 프로젝트 원칙대로 역전 구간의 계산을 거부하고 두 해석의 금액을 병기 안내만 할 것.",
+  "inversion2027Risk": "★2027년 역전은 위험이 아니라 확정된 사실이다.★ 2027년 시간급 최저임금 10,700원이 2026-08-05 고시되어 하한 = 10,700 x 8 x 80% = 68,480원이 된다. 반면 상한은 시행령 제68조제1항의 113,500원 그대로이며(현행 MST 287489 및 시행예정 MST 288717 양쪽 모두 개정 이력이 2025-12-23 에서 멈춰 있음을 확인) 113,500 x 60% = 68,100원이다. 즉 하한이 상한을 380원 초과한다. 역전이 시작되는 임계 시급은 68,100 / (8 x 0.8) = 10,640.63원이다(종전 기록의 10,650원은 부정확했다). 정부가 2026년 12월에 시행령을 개정해 상한을 올리면 해소되고(2025년 12월 제35934호와 같은 패턴), 개정이 없으면 2027-01-01 이직자 전원에게 역전이 실현된다. ★조치★ 2026-12-31 까지 시행령 개정 여부를 확인할 것. 그 전까지 2027 코호트를 만들지 않으며, 2026-12-31 이후 이직일은 엔진이 계산을 거부한다.",
+  "insuredPeriodAggregation": "피보험기간은 재직기간이 아니라 고용보험 피보험 기간이며, 종전 사업 상실일부터 3년 이내에 재취득했으면 종전 기간을 합산한다(제50조제4항제1호, 단 종전 상실로 구직급여를 받았으면 제외). 사용자가 현재 직장 재직기간만 입력하면 실제보다 짧게 나온다. 입력 라벨을 반드시 '고용보험 총 가입기간'으로 할 것.",
+  "preLedgerYears": "2024년 이하 이직일에 적용할 연도별 시간급 최저임금과 당시 시행령 상한액을 이 원장에서 정본으로 확정하지 않았다. 해당 이직일은 엔진이 거부한다.",
+  "futureLeaveDate": "2026-12-31 이후 이직일은 계산을 거부한다. 과거 방향(2025-01-01 이전)은 거부하면서 미래 방향은 9999-12-31 까지 열어두어 2027년 이직일에 2026년 최저임금·상한이 조용히 적용되던 결함을 적대적 검증에서 발견해 수정했다. 당시 2027-01-31 이직 입력이 경고 없이 통과하며 270일 기준 656,640원을 과소 표시했다. 코호트를 추가할 때는 반드시 leaveDateTo 를 닫아둘 것."
+ }
+}
+,
     calcNetPay: __mod["net-pay.js"].calcNetPay,
     annualToMonthly: __mod["net-pay.js"].annualToMonthly,
     calcSocialInsurance: __mod["insurance.js"].calcSocialInsurance,
@@ -11461,5 +12128,7 @@ module.exports = { calcPartTimePay, THRESHOLD };
     calcAnnualLeave: __mod["work-allowance.js"].calcAnnualLeave,
     convertWage: __mod["work-allowance.js"].convertWage,
     calcPartTimePay: __mod["parttime.js"].calcPartTimePay,
+    calcUnemploymentBenefit: __mod["unemployment.js"].calcUnemploymentBenefit,
+    benefitDaysTable: __mod["unemployment.js"].benefitDaysTable,
   };
 })(typeof window !== "undefined" ? window : globalThis);

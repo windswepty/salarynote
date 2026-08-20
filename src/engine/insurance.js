@@ -36,10 +36,14 @@ const floorTo1000 = (n) => Math.floor((n + EPS) / 1000) * 1000;
  * 그래서 형식(정규식)과 실재성(Date 재직렬화 일치) 두 가지를 모두 확인한 뒤에만
  * 사전순 비교로 넘긴다. 통과하지 못하면 조용히 틀리는 대신 멈춘다.
  */
-function normalizePayDate(payDate) {
+function normalizePayDate(payDate, label) {
+  // label 을 받지 못하면 예전처럼 'payDate' 로 부른다.
+  // 예전에는 이 인자가 아예 없어서, 실업급여 페이지에서 이직일을 비우면
+  // 존재하지도 않는 '급여 지급일'을 고치라는 엉뚱한 안내가 떴다.
+  const NAME = label || "payDate";
   if (typeof payDate !== "string") {
     throw new Error(
-      `payDate 는 'YYYY-MM-DD' 형식의 문자열이어야 합니다. 받은 값: ${JSON.stringify(
+      `${NAME} 은(는) 'YYYY-MM-DD' 형식의 문자열이어야 합니다. 받은 값: ${JSON.stringify(
         payDate
       )} (${typeof payDate}). Date 객체나 숫자가 아니라 문자열로 넘기십시오.`
     );
@@ -47,7 +51,7 @@ function normalizePayDate(payDate) {
   const d = payDate.slice(0, 10); // 'YYYY-MM-DDTHH:mm:ss' 같은 ISO 문자열도 허용
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
     throw new Error(
-      `payDate 형식이 올바르지 않습니다: '${payDate}'. 월·일을 두 자리로 0 패딩한 'YYYY-MM-DD' 여야 합니다(예: 2026-01-15). 0 패딩이 없으면 국민연금 상·하한 구간이 조용히 잘못 선택됩니다.`
+      `${NAME} 형식이 올바르지 않습니다: '${payDate}'. 월·일을 두 자리로 0 패딩한 'YYYY-MM-DD' 여야 합니다(예: 2026-01-15). 0 패딩이 없으면 적용 구간이 조용히 잘못 선택될 수 있습니다.`
     );
   }
   const [y, m, day] = d.split("-").map(Number);
