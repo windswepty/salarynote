@@ -1,0 +1,261 @@
+name: rates-watch
+
+# 요율 자동 갱신 감시.
+#
+# ★갱신 주기가 항목마다 달라도 워크플로를 나누지 않는다.★
+#   4대보험 1/1 · 간이세액표 2월말 · 기준소득월액 7/1 · 최저임금 8월초 — 넷 다
+#   "언제 바뀔지 정확히 모른다". 날짜 지정 cron 은 GitHub 이 공식 인정한 예약 드롭
+#   위험 때문에 '1년에 한 번뿐인 기회' 를 통째로 날린다. 매일 전 출처를 점검한다.
+#   비용은 월 2,000분 중 5% 미만이다.
+#
+# ★cron 은 UTC 다.★ KST = UTC+9 (한국은 1988년 이후 서머타임 없음).
+#   UTC 03:40 = KST 12:40 — PR 이 한국 근무시간에 떠서 당일 안에 사람이 본다.
+#   정각(분 00)과 :30 은 고부하 시간대라 피한다.
+#   on.schedule 의 timezone: 키는 비교적 최근 기능이라 쓰지 않았다. Asia/Seoul 은
+#   DST 가 없어 UTC 산술과 실행 시각이 완전히 동일하다.
+#
+# ★예약 워크플로는 기본 브랜치(main)의 최신 커밋으로만 돈다.★
+#   브랜치에서 cron 을 테스트할 수 없으므로 workflow_dispatch 를 반드시 병기한다.
+
+on:
+  schedule:
+    - cron: '40 3 * * *'
+  workflow_dispatch:
+    inputs:
+      year:
+        description: '대상 연도 (비우면 오늘 연도)'
+        required: false
+        default: ''
+      dry_run:
+        description: '원장에 쓰지 않고 리포트만'
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: rates-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    # 기본 360분이다. law.go.kr 이 hang 하면 6시간을 태운다.
+    timeout-minutes: 20
+    # 미지정 스코프는 자동으로 none 이 된다. 최소권한이 이걸로 성립한다.
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    env:
+      LAW_OC: ${{ secrets.LAW_OC }}
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # 최저임금 고시는 유일하게 PDF 로만 제공된다(admrul 의 조문내용이 빈 문자열).
+      # 이게 없으면 최저임금이 단일 출처가 되어 자동 병합 대상에서 빠진다.
+      - name: poppler-utils 설치 (최저임금 고시 PDF 파싱)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils
+
+      - name: 대상 연도 결정
+        id: cfg
+        run: |
+          Y="${{ github.event.inputs.year }}"
+          [ -z "$Y" ] && Y=$(date -u -d '+9 hours' +%Y)   # KST 기준 연도
+          echo "year=$Y" >> "$GITHUB_OUTPUT"
+          echo "today=$(date -u -d '+9 hours' +%F)" >> "$GITHUB_OUTPUT"
+          echo "대상 연도 $Y"
+
+      # ★프리플라이트★ OC=test 가 막히면 1차 정본 출처가 통째로 죽는다.
+      # 개인 OC 는 서버 IP 등록을 요구해 유동 IP 인 GitHub Actions 에서 대체가 안 된다.
+      # 여기서 조용히 넘어가면 이후 전부 '파싱 실패' 로 보여 원인을 못 찾는다.
+      - name: 법제처 DRF 프리플라이트
+        run: |
+          node -e "
+            require('./tools/lib/law-go-kr.js').preflight()
+              .then(r => console.log('OK OC=' + r.oc))
+              .catch(e => { console.error('::error::' + e.message); process.exit(1); });
+          "
+
+      - name: 출처 수집 (2개 이상 독립 출처)
+        run: |
+          node tools/fetch-rates.js --year "${{ steps.cfg.outputs.year }}" \
+            --out "data/candidates/observations-${{ steps.cfg.outputs.year }}.json"
+
+      # 교차검증 + 위생검사. 통과한 값만 원장에 반영된다.
+      # 종료 코드 0=통과 / 1=사람 확인 필요 / 2=FATAL.
+      - name: 교차검증 · 위생검사 · 원장 반영
+        id: update
+        run: |
+          set +e
+          node tools/update-rates.js \
+            --year "${{ steps.cfg.outputs.year }}" \
+            --observations "data/candidates/observations-${{ steps.cfg.outputs.year }}.json" \
+            --today "${{ steps.cfg.outputs.today }}" \
+            --report "$RUNNER_TEMP/report.md" \
+            --summary "$RUNNER_TEMP/summary.json" \
+            ${{ github.event.inputs.dry_run == 'true' && ' ' || '--apply' }}
+          code=$?
+          set -e
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "changed=$(git diff --quiet -- data/ && echo no || echo yes)" >> "$GITHUB_OUTPUT"
+          echo "종료 코드 $code"
+
+      # ★테스트가 통과할 때만 진행한다.★
+      # 예약 job 안에서 전부 돌리므로, GITHUB_TOKEN PR 의 '승인 대기' 제약이 무의미해진다.
+      # 실패하면 PR 이 아예 안 생기고 이슈만 뜬다 — '멈추는 것이 낫다' 원칙 그대로.
+      - name: 번들 재생성 + 전체 테스트
+        if: steps.update.outputs.code == '0'
+        run: |
+          set -e
+          node build/bundle.js
+          fail=0
+          for f in test/*.test.js; do
+            echo "::group::$f"
+            node "$f" || fail=1
+            echo "::endgroup::"
+          done
+          if [ "$fail" != "0" ]; then
+            echo "::error::테스트 실패. 원장 변경을 되돌립니다."
+            git checkout -- data/ web/assets/engine.js
+            exit 1
+          fi
+
+      # 값이 실제로 바뀐 경우에만 PR. main 병합 = Cloudflare Pages 즉시 배포이므로
+      # 자동 병합은 하지 않는다. 사람 검토 1회를 반드시 거친다.
+      - name: 값 변경 PR 생성
+        id: pr
+        if: steps.update.outputs.code == '0' && steps.update.outputs.changed == 'yes' && github.event.inputs.dry_run != 'true'
+        run: |
+          set -e
+          node -e "
+            const s = require(process.env.RUNNER_TEMP + '/summary.json');
+            process.stdout.write(String(s.applied.length));
+          " > /tmp/napplied
+          N=$(cat /tmp/napplied)
+          if [ "$N" = "0" ]; then
+            echo "값 변경 없음(lastVerified 만 변경). PR 을 만들지 않고 하트비트 단계로 넘깁니다."
+            echo "created=no" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          BR="bot/rates-${{ steps.cfg.outputs.year }}-${{ steps.cfg.outputs.today }}"
+          git config user.name  "salarynote-rates-bot"
+          git config user.email "windswept1325@gmail.com"
+          git checkout -b "$BR"
+          git add data/ web/assets/engine.js
+          git commit -m "[자동] ${{ steps.cfg.outputs.year }}년 요율 원장 갱신 후보 (${N}건)"
+          git push -u origin "$BR"
+          gh pr create \
+            --title "[자동] ${{ steps.cfg.outputs.year }}년 요율 원장 갱신 (${N}건)" \
+            --body-file "$RUNNER_TEMP/report.md" \
+            --label rates-update \
+            --assignee windswepty \
+            --base main --head "$BR"
+          echo "created=yes" >> "$GITHUB_OUTPUT"
+
+      # 하트비트 — 값 변경이 없어도 '확인했다' 는 기록을 남긴다.
+      # ★매일 커밋하면 Cloudflare Pages 가 매일 재배포된다.★ 내용이 같은 번들을
+      # 매일 배포하는 것은 무의미한 churn 이므로 7일에 한 번만 민다.
+      # 진짜 생존 신호는 아래의 외부 dead-man switch 다.
+      - name: 하트비트 커밋 (7일에 한 번)
+        if: steps.update.outputs.code == '0' && steps.pr.outputs.created != 'yes' && github.event.inputs.dry_run != 'true'
+        run: |
+          set -e
+          # update-rates --apply 가 이미 작업 트리의 lastVerified 를 오늘로 바꿔 놨다.
+          # '직전에 커밋된' 값과 비교해야 하므로 HEAD 의 내용을 읽는다.
+          LAST=$(git show "HEAD:data/rates-${{ steps.cfg.outputs.year }}.json" | node -e "
+            let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).lastVerified));
+          ")
+          DAYS=$(( ( $(date -u -d "${{ steps.cfg.outputs.today }}" +%s) - $(date -u -d "$LAST" +%s) ) / 86400 ))
+          echo "직전 lastVerified=$LAST (${DAYS}일 전)"
+          if [ "$DAYS" -lt 7 ]; then
+            echo "7일이 안 됐습니다. 하트비트 커밋을 건너뜁니다(불필요한 재배포 방지)."
+            git checkout -- data/ web/assets/engine.js || true
+            exit 0
+          fi
+          node build/bundle.js
+          git config user.name  "salarynote-rates-bot"
+          git config user.email "windswept1325@gmail.com"
+          git add data/ web/assets/engine.js
+          git diff --cached --quiet && { echo "변경 없음"; exit 0; }
+          git commit -m "[자동] 요율 확인 기록 갱신 (lastVerified=${{ steps.cfg.outputs.today }}, 숫자 변경 없음)"
+          git push origin HEAD:main
+
+      # 낡음 감시 — '실패 시 멈춤' 은 감시가 없으면 무기한 침묵이 된다.
+      - name: 낡음(staleness) 감시
+        id: stale
+        if: always()
+        run: |
+          set +e
+          node tools/sanity-check.js "data/rates-${{ steps.cfg.outputs.year }}.json" \
+            --staleness --today "${{ steps.cfg.outputs.today }}" > "$RUNNER_TEMP/stale.md"
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+          cat "$RUNNER_TEMP/stale.md"
+
+      # ★외부 dead-man switch — 이게 이 워크플로에서 가장 중요한 한 줄이다.★
+      # GitHub 은 '실패' 만 알린다. '예약 실행이 드롭됨' / '워크플로 비활성화' /
+      # '월 2,000분 소진' 세 가지 침묵 실패는 절대 알려주지 못한다.
+      # 이 프로젝트가 두려워하는 것(몇 달간 틀린 요율)은 전부 그 셋에서 나온다.
+      - name: 하트비트 핑 (healthchecks.io)
+        if: success()
+        run: |
+          if [ -z "${{ secrets.HEALTHCHECK_URL }}" ]; then
+            echo "::warning::HEALTHCHECK_URL 시크릿이 없습니다. 외부 dead-man switch 없이는 '워크플로가 아예 안 돈 것' 을 아무도 알 수 없습니다. 반드시 설정하십시오."
+            exit 0
+          fi
+          curl -fsS -m 10 --retry 3 "${{ secrets.HEALTHCHECK_URL }}"
+
+      # 사람 확인이 필요하거나(1) FATAL(2)이거나 낡음 경보가 있으면 이슈.
+      # ★assign 은 watch 설정과 무관하게 알림을 보장한다.★
+      # 매일 도는 워크플로이므로 중복 방지가 없으면 이슈가 365개 쌓인다.
+      - name: 이슈 생성 / 코멘트
+        if: always() && (failure() || steps.update.outputs.code != '0' || steps.stale.outputs.code == '2')
+        run: |
+          set -e
+          URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          BODY="$RUNNER_TEMP/issue.md"
+          {
+            echo "자동 갱신 실행에서 사람 개입이 필요합니다."
+            echo
+            echo "- 실행 로그: $URL"
+            echo "- update-rates 종료 코드: \`${{ steps.update.outputs.code }}\` (0=통과 / 1=사람 확인 / 2=FATAL)"
+            echo "- **원장은 변경되지 않았습니다. 사이트는 마지막 정상값으로 계속 동작합니다.**"
+            echo
+            [ -f "$RUNNER_TEMP/report.md" ] && cat "$RUNNER_TEMP/report.md"
+            echo
+            [ -f "$RUNNER_TEMP/stale.md" ] && { echo '---'; echo; cat "$RUNNER_TEMP/stale.md"; }
+          } > "$BODY"
+
+          N=$(gh issue list --state open --label rates-alert --json number --jq '.[0].number // empty')
+          if [ -n "$N" ]; then
+            gh issue comment "$N" --body-file "$BODY"
+            echo "기존 이슈 #$N 에 코멘트했습니다(중복 방지)."
+          else
+            gh issue create \
+              --title "요율 자동 갱신 개입 필요 (${{ steps.cfg.outputs.today }})" \
+              --label rates-alert \
+              --assignee windswepty \
+              --body-file "$BODY"
+          fi
+
+      - name: 관측·리포트 보관
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rates-watch-${{ steps.cfg.outputs.today }}
+          path: |
+            data/candidates/
+            ${{ runner.temp }}/report.md
+            ${{ runner.temp }}/summary.json
+            ${{ runner.temp }}/stale.md
+          if-no-files-found: warn
+          retention-days: 30
+
+      # FATAL 이면 워크플로 자체를 실패시켜 GitHub 알림 경로도 태운다.
+      - name: FATAL 이면 실패 처리
+        if: steps.update.outputs.code == '2'
+        run: |
+          echo "::error::위생 검사 FATAL. 후보를 폐기했고 원장은 그대로입니다."
+          exit 1

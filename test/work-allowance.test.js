@@ -1,7 +1,8 @@
 const assert = require("assert");
 const path = require("path");
 const R = (p) => require(path.join(__dirname, "..", p));
-const rates = R("data/rates-2026.json");
+const L = require(path.join(__dirname, "..", "tools", "lib", "resolve-ledger.js")).resolve();
+const rates = require(L.ledgerPath);
 const { calcWeeklyHolidayPay, calcAnnualLeave, convertWage } = R("src/engine/work-allowance.js");
 
 let pass = 0, fail = 0;

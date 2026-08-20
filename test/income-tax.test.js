@@ -1,12 +1,8 @@
 const assert = require("assert");
 const path = require("path");
-const rates = require(path.join(__dirname, "..", "data", "rates-2026.json"));
-const table = require(path.join(
-  __dirname,
-  "..",
-  "data",
-  "simplified-tax-table-2026.json"
-));
+const L = require(path.join(__dirname, "..", "tools", "lib", "resolve-ledger.js")).resolve();
+const rates = require(L.ledgerPath);
+const table = require(L.taxTablePath);
 const {
   calcIncomeTax,
   calcLocalIncomeTax,

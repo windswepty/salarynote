@@ -7,8 +7,9 @@ const assert = require("assert");
 const path = require("path");
 
 const R = (p) => require(path.join(__dirname, "..", p));
-const rates = R("data/rates-2026.json");
-const table = R("data/simplified-tax-table-2026.json");
+const L = require(path.join(__dirname, "..", "tools", "lib", "resolve-ledger.js")).resolve();
+const rates = require(L.ledgerPath);
+const table = require(L.taxTablePath);
 const { calcNetPay } = R("src/engine/net-pay.js");
 const { lookupTableTax } = R("src/engine/income-tax.js");
 

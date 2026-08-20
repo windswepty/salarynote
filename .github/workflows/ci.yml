@@ -1,0 +1,63 @@
+name: ci
+
+# push / PR 마다 도는 기본 검증.
+# ★rates-watch 는 이 워크플로에 의존하지 않는다.★
+# GITHUB_TOKEN 이 만든 PR 의 on:pull_request 실행은 '승인 대기' 상태로 생성되어
+# 사람이 클릭하기 전에는 돌지 않는다. 그래서 rates-watch 는 자기 job 안에서
+# 테스트를 전부 돌린 뒤에만 PR 을 연다. 이 파일은 사람이 손으로 밀어 넣는 변경을 지킨다.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # actions/setup-node 를 쓰지 않는다. npm 의존성이 0개이고 러너 기본 node 로 충분하다.
+      # cache: npm 은 package-lock.json 이 없어서 액션 자체를 실패시킨다.
+      - uses: actions/checkout@v4
+
+      - name: node 버전
+        run: node --version
+
+      - name: 원장 위생 검사 (FATAL 이면 여기서 멈춘다)
+        run: node tools/sanity-check.js "$(node tools/lib/resolve-ledger.js ledger)"
+
+      - name: 전체 테스트
+        run: |
+          set -e
+          fail=0
+          for f in test/*.test.js; do
+            echo "::group::$f"
+            node "$f" || fail=1
+            echo "::endgroup::"
+          done
+          exit $fail
+
+      - name: 번들이 원본과 어긋나지 않는지 확인
+        run: |
+          set -e
+          node build/bundle.js
+          if ! git diff --quiet -- web/assets/engine.js; then
+            echo "::error::web/assets/engine.js 가 원본과 어긋납니다. 'node build/bundle.js' 를 돌려 커밋하십시오."
+            git --no-pager diff --stat -- web/assets/engine.js
+            exit 1
+          fi
+
+      # 낡음 감시는 CI 에서 '실패' 로 만들지 않는다.
+      # 개발하러 온 사람의 PR 을 요율 낡음으로 막으면 경보 피로만 생긴다.
+      # 실제 알림은 rates-watch 의 이슈 생성과 외부 하트비트가 담당한다.
+      - name: 낡음(staleness) 감시 — 참고용
+        continue-on-error: true
+        run: node tools/sanity-check.js "$(node tools/lib/resolve-ledger.js ledger)" --staleness
