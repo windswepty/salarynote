@@ -117,13 +117,40 @@ function calcNationalPension(monthlyIncome, rates, payDate) {
 /** 건강보험 (근로자 부담분) */
 function calcHealthInsurance(monthlyIncome, rates) {
   const hi = rates.healthInsurance;
-  const amount = floorTo10(monthlyIncome * hi.employeeRate);
+  const b = hi.premiumBounds;
+
+  // ★상·하한은 보수월액이 아니라 '월별 보험료액'에 건다.★
+  // 고시 문언(제2조·제3조)이 보험료액 기준이므로 보수월액을 clamp 한 뒤
+  // 요율을 곱하면 안 된다. 노사 합산 보험료를 먼저 구해 clamp 하고 절반을 취한다.
+  //
+  // 일반 급여 구간에서는 어느 쪽도 구속되지 않아 결과가 이전과 동일하다.
+  // 하한은 보수월액 약 280,389원 미만에서 실제로 발동한다(아르바이트·단시간 구간).
+  const rawTotal = monthlyIncome * hi.totalRate;
+  let total = rawTotal;
+  let capped = false;
+  let floored = false;
+
+  if (b) {
+    if (total > b.totalMax) { total = b.totalMax; capped = true; }
+    else if (total < b.totalMin) { total = b.totalMin; floored = true; }
+  }
+
+  const amount = floorTo10(total / 2);
+
   return {
     amount,
     basis: {
       보수월액: monthlyIncome,
+      총요율: hi.totalRate,
       근로자요율: hi.employeeRate,
-      산식: `${monthlyIncome.toLocaleString()} × ${(hi.employeeRate * 100).toFixed(3)}% = ${amount.toLocaleString()}원`,
+      상한적용: capped,
+      하한적용: floored,
+      ...(b ? { 적용상한: b.totalMax, 적용하한: b.totalMin } : {}),
+      산식: capped
+        ? `노사합산 ${Math.round(rawTotal).toLocaleString()}원이 상한 ${b.totalMax.toLocaleString()}원을 넘어 상한 적용 → 근로자 ${amount.toLocaleString()}원`
+        : floored
+        ? `노사합산 ${Math.round(rawTotal).toLocaleString()}원이 하한 ${b.totalMin.toLocaleString()}원에 미달해 하한 적용 → 근로자 ${amount.toLocaleString()}원`
+        : `${monthlyIncome.toLocaleString()} × ${(hi.employeeRate * 100).toFixed(3)}% = ${amount.toLocaleString()}원`,
     },
   };
 }
@@ -1359,7 +1386,18 @@ module.exports = { calcWeeklyHolidayPay, calcAnnualLeave, convertWage, LEGAL };
     "note": "2025년 7.09% 대비 0.1%p 인상.",
     "source": "https://mohw.go.kr/board.es?act=view&bid=0027&list_no=1487279&mid=a10503010100&nPage=1&tag=",
 
-    "$premiumBoundsOpenIssue": "★미해결 — 의도적 미구현★ 국민건강보험법 제69조제6항 및 보건복지부고시(월별 건강보험료액의 상한과 하한)에 따라 보수월액보험료에는 상·하한이 있으나 이 엔진은 clamp 를 구현하지 않았다. 국민연금은 baseIncomeBrackets 로 clamp 되는데 건강보험만 없어 비대칭 상태다. 검증 과정에서 상한 노사합산 9,183,480원 / 하한 노사합산 20,160원(보건복지부고시 제2025-222호)이라는 수치가 나왔으나 웹 검색 요약이 출처이고 고시 원문(law.go.kr 미렌더링) 대조에 실패해 원장에 넣지 않았다. 검증되지 않은 숫자를 원장에 넣는 것보다 미구현이 낫다는 판단이다. 구속 지점은 보수월액 약 280,389원 미만 / 127,725,730원 초과로 추정되며, 현재 대상(연봉 3,000만~2억, 최저임금 월환산 2,156,880원)에서는 어느 쪽도 구속되지 않아 실사용 영향이 없다. ★단시간·일용·아르바이트 계산기 페이지를 추가하는 순간 하한이 실제로 발동하므로 그 전에 반드시 고시 원문을 확보해 premiumBounds 를 신설하고 calcHealthInsurance 에 clamp 를 넣을 것.★ clamp 대상이 '보수월액'인지 '보험료액'인지도 고시 문언으로 확정해야 한다(고시 제목상 보험료액 기준으로 보인다)."
+    "premiumBounds": {
+      "$comment": "★상·하한은 '보수월액'이 아니라 '월별 보험료액'에 건다.★ 고시 문언이 그렇다. 아래 금액은 노사 합산액이며 근로자 부담은 그 절반이다.",
+      "totalMax": 9183480,
+      "totalMin": 20160,
+      "basis": "국민건강보험법 제69조제6항 및 시행령 제32조 / 「월별 건강보험료액의 상한과 하한에 관한 고시」 제2조제1호·제3조제1호(직장가입자의 보수월액보험료)",
+      "decree": "보건복지부고시 제2025-222호",
+      "promulgated": "2025-12-24",
+      "effectiveFrom": "2026-01-01",
+      "source": "https://www.law.go.kr/DRF/lawService.do?target=admrul&ID=2100000270472",
+      "$bindingPoints": "보수월액 약 280,389원 미만에서 하한이, 약 127,725,730원 초과에서 상한이 구속된다. 일반 급여 구간에서는 걸리지 않지만 아르바이트·단시간 구간에서는 하한이 실제로 발동한다.",
+      "$notCovered": "고시 제2조제2호·제3조제2호(소득월액보험료·지역가입자)는 직장가입자 보수월액보험료와 별개이며 이 계산기 범위 밖이다."
+    }
   },
 
   "longTermCare": {

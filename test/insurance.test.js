@@ -5,6 +5,8 @@ const rates = require(L.ledgerPath);
 const {
   calcSocialInsurance,
   calcNationalPension,
+  calcHealthInsurance,
+  calcLongTermCare,
 } = require(path.join(__dirname, "..", "src", "engine", "insurance.js"));
 
 let pass = 0;
@@ -147,6 +149,51 @@ t("★회귀★ 문자열이 아닌 지급일(Date 객체·숫자)을 명확한 
 t("ISO datetime 문자열은 앞 10자리만 잘라 계속 허용한다", () => {
   const r = calcNationalPension(9_000_000, rates, "2026-01-15T09:00:00.000Z");
   assert.strictEqual(r.amount, 302_570);
+});
+
+
+/* 건강보험 보험료액 상·하한 (보건복지부고시 제2025-222호)
+   오래 미결이던 항목. 국민연금만 clamp 가 있고 건강보험엔 없어 양끝에서 값이 틀렸다.
+   고시 원문을 law.go.kr 에서 확보해 해소했다.
+   핵심: 상·하한은 '보수월액'이 아니라 '월별 보험료액'에 건다. */
+
+t("일반 급여 구간에서는 상·하한이 구속되지 않는다 (기존 값 불변)", () => {
+  const r = calcHealthInsurance(3000000, rates);
+  assert.strictEqual(r.amount, 107850, "clamp 도입으로 일반 구간 값이 변하면 안 된다");
+  assert.strictEqual(r.basis["상한적용"], false);
+  assert.strictEqual(r.basis["하한적용"], false);
+});
+
+t("저소득 구간에서 하한이 발동한다 (아르바이트·단시간)", () => {
+  const r = calcHealthInsurance(200000, rates);
+  assert.strictEqual(r.basis["하한적용"], true);
+  assert.strictEqual(r.amount, 10080, "노사합산 하한 20,160원의 절반");
+});
+
+t("초고소득 구간에서 상한이 발동한다", () => {
+  const r = calcHealthInsurance(130000000, rates);
+  assert.strictEqual(r.basis["상한적용"], true);
+  assert.strictEqual(r.amount, 4591740, "노사합산 상한 9,183,480원의 절반");
+});
+
+t("clamp 는 보수월액이 아니라 보험료액에 걸린다", () => {
+  const r = calcHealthInsurance(100000, rates);
+  assert.strictEqual(r.amount, 10080);
+  const ifClampedOnIncome = Math.floor(20160 * rates.healthInsurance.employeeRate / 10) * 10;
+  assert.notStrictEqual(r.amount, ifClampedOnIncome, "보수월액에 clamp 한 결과와 같으면 안 된다");
+});
+
+t("하한 구속 경계가 고시값과 맞는다", () => {
+  const edge = rates.healthInsurance.premiumBounds.totalMin / rates.healthInsurance.totalRate;
+  assert.strictEqual(calcHealthInsurance(Math.floor(edge) - 1000, rates).basis["하한적용"], true);
+  assert.strictEqual(calcHealthInsurance(Math.ceil(edge) + 1000, rates).basis["하한적용"], false);
+});
+
+t("장기요양보험은 clamp 된 건강보험료를 기준으로 계산된다", () => {
+  const health = calcHealthInsurance(200000, rates);
+  const care = calcLongTermCare(health.amount, rates);
+  assert.strictEqual(health.basis["하한적용"], true);
+  assert.strictEqual(care.basis["건강보험료"], health.amount, "clamp 이전 값이 새어나가면 안 된다");
 });
 
 console.log(`\n  ${pass} passed, ${fail} failed\n`);

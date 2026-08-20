@@ -453,10 +453,14 @@ t("★회귀★ 오버플로를 일으키는 거대 입력은 -Infinity 대신 �
 
 t("★회귀★ 총지급액 0원은 계산하되 음수 실수령액을 반드시 경고한다", () => {
   // 무급휴직 등 보수 0원인 달이 실재하므로 throw 하지 않는다.
-  // 다만 국민연금 하한 때문에 실수령액이 음수가 되므로 조용히 넘기면 안 된다.
+  // 국민연금 하한(19,470) + 건강보험 하한(10,080) + 그에 딸린 장기요양(1,320) 때문에
+  // 실수령액이 음수가 되므로 조용히 넘기면 안 된다.
+  // 건강보험 하한은 보건복지부고시 제2025-222호를 반영하면서 추가됐다.
   const r = run({ monthlySalary: 0, dependents: 1, payDate: "2026-08-18" });
   assert.strictEqual(r.gross, 0);
-  assert.strictEqual(r.netPay, -19_470);
+  assert.strictEqual(r.insurance.pension, 19_470, "국민연금 하한");
+  assert.strictEqual(r.insurance.health, 10_080, "건강보험 하한(노사합산 20,160의 절반)");
+  assert.strictEqual(r.netPay, -30_870);
   assert.ok(r.warnings.some((w) => w.includes("음수")), "음수 실수령액 경고 필요");
   assert.ok(r.warnings.some((w) => w.includes("하한")), "보수월액 0원 경고 필요");
 });

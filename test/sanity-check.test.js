@@ -416,7 +416,15 @@ t("★보호 경로($comment) 수정은 FATAL★", () => {
 });
 
 t("미해결 이슈 주석 삭제는 FATAL", () => {
-  const res = run(poison({ "healthInsurance.$premiumBoundsOpenIssue": "__DELETE__" }));
+  // premiumBoundsOpenIssue 는 고시 원문 확보로 해소되어 premiumBounds 로 대체됐다.
+  // 아직 남아 있는 미결 주석으로 같은 불변식을 지킨다.
+  const res = run(poison({ "childTaxCredit.$ageRangeOpenIssue": "__DELETE__" }));
+  expectFatal(res, "KEY_REMOVED");
+});
+
+t("법정 상·하한(premiumBounds) 삭제는 FATAL", () => {
+  // 보건복지부고시로 확보한 값이다. 조용히 사라지면 저소득 구간이 다시 틀린다.
+  const res = run(poison({ "healthInsurance.premiumBounds.totalMin": "__DELETE__" }));
   expectFatal(res, "KEY_REMOVED");
 });
 
@@ -755,13 +763,19 @@ t("기존 구간의 금액 변경은 2출처 일치 시 반영된다", () => {
   });
 });
 
-t("건강보험 상·하한은 단일 출처라 원장에 반영되지 않는다", () => {
+t("자동 갱신은 건강보험 상·하한을 건드리지 못한다", () => {
+  // FACT_MAP 에 없는 경로라 수집돼도 보고만 되고 원장에는 쓰이지 않는다.
+  // 이 값은 고시 원문을 사람이 확인해 넣은 것이므로 자동으로 바뀌면 안 된다.
   const obs = obsOf({
-    "healthInsurance.premiumBounds.max": fact(9183480, ["law.go.kr"]),
-    "healthInsurance.premiumBounds.min": fact(20160, ["law.go.kr"]),
+    "healthInsurance.premiumBounds.totalMax": fact(1, ["law.go.kr"]),
+    "healthInsurance.premiumBounds.totalMin": fact(2, ["law.go.kr"]),
   });
   const b = buildCandidate(BASE, obs, "2026-08-19");
-  assert.strictEqual(b.candidate.healthInsurance.premiumBounds, undefined);
+  assert.deepStrictEqual(
+    b.candidate.healthInsurance.premiumBounds,
+    BASE.healthInsurance.premiumBounds,
+    "자동 갱신이 법정 상·하한을 덮어썼다"
+  );
   assert.strictEqual(b.reportOnly.length, 2);
 });
 

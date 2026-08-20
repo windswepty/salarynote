@@ -106,13 +106,40 @@ function calcNationalPension(monthlyIncome, rates, payDate) {
 /** 건강보험 (근로자 부담분) */
 function calcHealthInsurance(monthlyIncome, rates) {
   const hi = rates.healthInsurance;
-  const amount = floorTo10(monthlyIncome * hi.employeeRate);
+  const b = hi.premiumBounds;
+
+  // ★상·하한은 보수월액이 아니라 '월별 보험료액'에 건다.★
+  // 고시 문언(제2조·제3조)이 보험료액 기준이므로 보수월액을 clamp 한 뒤
+  // 요율을 곱하면 안 된다. 노사 합산 보험료를 먼저 구해 clamp 하고 절반을 취한다.
+  //
+  // 일반 급여 구간에서는 어느 쪽도 구속되지 않아 결과가 이전과 동일하다.
+  // 하한은 보수월액 약 280,389원 미만에서 실제로 발동한다(아르바이트·단시간 구간).
+  const rawTotal = monthlyIncome * hi.totalRate;
+  let total = rawTotal;
+  let capped = false;
+  let floored = false;
+
+  if (b) {
+    if (total > b.totalMax) { total = b.totalMax; capped = true; }
+    else if (total < b.totalMin) { total = b.totalMin; floored = true; }
+  }
+
+  const amount = floorTo10(total / 2);
+
   return {
     amount,
     basis: {
       보수월액: monthlyIncome,
+      총요율: hi.totalRate,
       근로자요율: hi.employeeRate,
-      산식: `${monthlyIncome.toLocaleString()} × ${(hi.employeeRate * 100).toFixed(3)}% = ${amount.toLocaleString()}원`,
+      상한적용: capped,
+      하한적용: floored,
+      ...(b ? { 적용상한: b.totalMax, 적용하한: b.totalMin } : {}),
+      산식: capped
+        ? `노사합산 ${Math.round(rawTotal).toLocaleString()}원이 상한 ${b.totalMax.toLocaleString()}원을 넘어 상한 적용 → 근로자 ${amount.toLocaleString()}원`
+        : floored
+        ? `노사합산 ${Math.round(rawTotal).toLocaleString()}원이 하한 ${b.totalMin.toLocaleString()}원에 미달해 하한 적용 → 근로자 ${amount.toLocaleString()}원`
+        : `${monthlyIncome.toLocaleString()} × ${(hi.employeeRate * 100).toFixed(3)}% = ${amount.toLocaleString()}원`,
     },
   };
 }
