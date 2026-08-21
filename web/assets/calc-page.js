@@ -301,6 +301,39 @@
     calc();
   }
 
+  /** 연장·야간·휴일수당 — 5인 미만 판정을 표에 드러내는 것이 핵심이다. */
+  function initOvertime() {
+    const el = shell();
+    const g = (id) => document.getElementById(id);
+    for (const id of ["otHourly", "otMonthly"]) U.attachComma(g(id));
+
+    const calc = () => {
+      try {
+        const r = SN.calcOvertimePay({
+          hourlyOrdinaryWage: U.parseNum(g("otHourly")) || undefined,
+          monthlyOrdinaryWage: U.parseNum(g("otMonthly")) || undefined,
+          overtimeHours: blankToUndefined(g("otOver").value),
+          nightHours: blankToUndefined(g("otNight").value),
+          holidayHours: blankToUndefined(g("otHoliday").value),
+          employees: blankToUndefined(g("otEmployees").value),
+        }, SN.rates);
+
+        simpleRender(el, r.total,
+          "통상시급 " + U.won(r.hourlyOrdinaryWage) + "원 · " +
+            (r.premiumApplies ? "5인 이상, 가산 적용" : "5인 미만, 가산 미적용"),
+          [["연장근로", r.overtimeHours ? r.overtimeHours + "시간 → " + U.won(r.overtimePay) + "원" : "없음"],
+           ["야간가산", r.nightHours ? r.nightHours + "시간 → " + U.won(r.nightPay) + "원" : "없음"],
+           ["휴일근로", r.holidayHours
+              ? r.holidayHours + "시간 (8시간 초과 " + r.holidayOver8 + "시간) → " + U.won(r.holidayPay) + "원"
+              : "없음"],
+           ["합계", U.won(r.total) + "원", "sum"]],
+          r.basis, r.warnings);
+      } catch (e) { fail(el, e); }
+    };
+    bindAll(["otHourly", "otMonthly", "otOver", "otNight", "otHoliday", "otEmployees"], calc);
+    calc();
+  }
+
   window.SN_PAGE = function (opts) {
     const mode = opts.mode; // "annual" | "monthly" | "insurance" | "severance"
     if (mode === "severance") return initSeverance();
@@ -309,6 +342,7 @@
     if (mode === "leave") return initLeave();
     if (mode === "convert") return initConvert();
     if (mode === "parttime") return initPartTime();
+    if (mode === "overtime") return initOvertime();
     const el = {
       salary: U.$("#salary") || U.$("#base"),
       dep: U.$("#dep"), nt: U.$("#nt"), months: U.$("#months"), paydate: U.$("#paydate"),

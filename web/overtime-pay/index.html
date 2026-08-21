@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>연장·야간·휴일근로수당 계산기 2026 | 샐러리노트</title>
+<meta name="description" content="야근수당과 휴일수당을 계산합니다. 연장 1.5배, 야간 0.5배 가산, 휴일 8시간 초과 2배를 반영하고 5인 미만 사업장 여부까지 판정합니다.">
+<link rel="canonical" href="https://salarynote.pages.dev/overtime-pay/">
+<meta property="og:title" content="연장·야간·휴일근로수당 계산기 2026 | 샐러리노트">
+<meta property="og:type" content="website"><meta property="og:locale" content="ko_KR">
+<link rel="stylesheet" href="/assets/style.css">
+<!--FAQ-->
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@type": "FAQPage",
+ "mainEntity": [
+  {
+   "@type": "Question",
+   "name": "배수는 어떻게 정해지나요",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "근로기준법 제56조가 정합니다. 연장근로는 통상임금의 50% 이상을 가산하므로 1.5배입니다. 야간근로(오후 10시부터 다음 날 오전 6시)도 50%를 가산합니다. 휴일근로는 8시간 이내는 50%, 8시간을 초과하면 100%를 가산해 각각 1.5배와 2배가 됩니다."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "야근이 밤에 걸치면 얼마인가요",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "야간근로는 별도의 근로가 아니라 가산입니다. 그래서 연장근로가 야간 시간대에 걸치면 연장 50%와 야간 50%가 함께 붙어 통상임금의 2배가 됩니다. 이 계산기에서 야간근로 시간은 연장·휴일과 겹쳐도 그대로 입력하시면 됩니다. 겹치는 부분을 빼면 오히려 적게 계산됩니다."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "5인 미만 사업장은 왜 다른가요",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "근로기준법 제11조 제1항은 이 법을 상시 5명 이상 사업장에 적용한다고 정합니다. 4명 이하 사업장에 적용되는 규정은 시행령 별표1이 따로 열거하는데, 그 목록의 근로시간 관련 항목에는 제54조(휴게)·제55조 제1항(주휴일)·제63조만 있고 제56조는 없습니다. 따라서 5인 미만 사업장에서는 가산수당 지급 의무가 발생하지 않습니다. 다만 일한 시간만큼의 통상임금은 그대로 받아야 합니다. 가산분이 없을 뿐 임금 자체가 없어지는 것이 아닙니다. 이 구분을 반영하지 않고 무조건 1.5배를 안내하는 곳이 있는데, 5인 미만 사업장 근로자에게는 사실과 다른 정보입니다."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "상시 근로자 수는 어떻게 세나요",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "사업장 단위로 셉니다. 정규직뿐 아니라 기간제·단시간 근로자도 포함하며, 산정 기간의 연인원을 가동일수로 나누어 계산합니다. 사업주와 동거하는 친족만 있는 사업장은 적용 대상이 아닙니다. 인원이 경계 부근에서 오르내린다면 판단이 갈릴 수 있으니 고용노동부나 노무사의 확인을 받아보시는 편이 안전합니다."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "통상임금에는 무엇이 들어가나요",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "기본급과 정기적·일률적으로 지급되는 수당이 들어갑니다. 직책수당이나 자격수당처럼 매달 같은 조건으로 지급되는 항목이 해당합니다. 반면 성과에 따라 달라지는 상여금이나 실비 변상 성격의 금품은 보통 제외됩니다. 무엇이 통상임금인지는 다툼이 많은 영역이라, 금액이 크다면 급여명세서를 들고 전문가의 확인을 받는 편이 좋습니다."
+   }
+  }
+ ]
+}
+</script>
+<!--/FAQ-->
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="brand" href="/">샐러리노트</a>
+  <nav class="nav">
+    <a href="/">연봉<span class="bar"></span></a>
+    <a href="/monthly-salary/">월급<span class="bar"></span></a>
+    <a href="/four-insurance/">4대보험<span class="bar"></span></a>
+    <a href="/severance-pay/">퇴직금<span class="bar"></span></a>
+    <a href="/weekly-holiday-pay/">주휴수당<span class="bar"></span></a>
+    <a href="/annual-leave/">연차<span class="bar"></span></a>
+    <a href="/wage-converter/">환산<span class="bar"></span></a>
+    <a href="/overtime-pay/" aria-current="page">야근수당<span class="bar"></span></a>
+    <a href="/part-time/">알바<span class="bar"></span></a>
+    <a href="/unemployment/">실업급여<span class="bar"></span></a>
+  </nav>
+  <div class="ptitle">
+  <h1>연장·야간·휴일근로수당 계산기</h1>
+  <p class="sub">5인 미만 사업장 여부까지 판정해 계산합니다.</p>
+  </div>
+</header>
+
+<main class="content">
+<div class="card">
+  <div class="row">
+    <div class="field">
+      <label for="otHourly">통상시급 <span class="hint">(원, 모르면 아래 월 통상임금)</span></label>
+      <input id="otHourly" type="text" inputmode="numeric" autocomplete="off" value="15,000">
+    </div>
+    <div class="field">
+      <label for="otEmployees">상시 근로자 수 <span class="hint">(5인 미만이면 가산 없음)</span></label>
+      <input id="otEmployees" type="number" min="1" max="10000" step="1" value="10">
+    </div>
+  </div>
+  <div class="row">
+    <div class="field">
+      <label for="otOver">연장근로 <span class="hint">(시간)</span></label>
+      <input id="otOver" type="number" min="0" max="400" step="0.5" value="10">
+    </div>
+    <div class="field">
+      <label for="otNight">야간근로 <span class="hint">(22시~06시, 겹쳐도 입력)</span></label>
+      <input id="otNight" type="number" min="0" max="400" step="0.5" value="0">
+    </div>
+  </div>
+  <div class="row">
+    <div class="field">
+      <label for="otHoliday">휴일근로 <span class="hint">(시간)</span></label>
+      <input id="otHoliday" type="number" min="0" max="400" step="0.5" value="0">
+    </div>
+    <div class="field">
+      <label for="otMonthly">월 통상임금 <span class="hint">(통상시급 대신)</span></label>
+      <input id="otMonthly" type="text" inputmode="numeric" autocomplete="off" placeholder="비워두면 시급 사용">
+    </div>
+  </div>
+</div>
+
+<div id="notices"></div>
+
+<div class="card result">
+  <div class="cap">가산수당 합계</div>
+  <div class="big" id="out">—</div>
+  <div class="side" id="side"></div>
+</div>
+
+<div class="card">
+  <table><tbody id="breakdown"></tbody></table>
+  <details id="basisBox"><summary>계산 근거 보기</summary><div class="body"><ul id="basis"></ul></div></details>
+</div>
+
+<div class="ad"></div>
+
+<div class="card prose">
+  <h2>배수는 어떻게 정해지나요</h2>
+  <p>근로기준법 제56조가 정합니다. <b>연장근로</b>는 통상임금의 50% 이상을 가산하므로 1.5배입니다. <b>야간근로</b>(오후 10시부터 다음 날 오전 6시)도 50%를 가산합니다. <b>휴일근로</b>는 8시간 이내는 50%, 8시간을 초과하면 100%를 가산해 각각 1.5배와 2배가 됩니다.</p>
+
+  <h2>야근이 밤에 걸치면 얼마인가요</h2>
+  <p>야간근로는 별도의 근로가 아니라 <b>가산</b>입니다. 그래서 연장근로가 야간 시간대에 걸치면 연장 50%와 야간 50%가 함께 붙어 <b>통상임금의 2배</b>가 됩니다.</p>
+  <p>이 계산기에서 야간근로 시간은 연장·휴일과 겹쳐도 그대로 입력하시면 됩니다. 겹치는 부분을 빼면 오히려 적게 계산됩니다.</p>
+
+  <h2>5인 미만 사업장은 왜 다른가요</h2>
+  <p>근로기준법 제11조 제1항은 이 법을 <b>상시 5명 이상</b> 사업장에 적용한다고 정합니다. 4명 이하 사업장에 적용되는 규정은 시행령 별표1이 따로 열거하는데, 그 목록의 근로시간 관련 항목에는 제54조(휴게)·제55조 제1항(주휴일)·제63조만 있고 <b>제56조는 없습니다.</b></p>
+  <p>따라서 5인 미만 사업장에서는 가산수당 지급 의무가 발생하지 않습니다. 다만 <b>일한 시간만큼의 통상임금은 그대로 받아야 합니다.</b> 가산분이 없을 뿐 임금 자체가 없어지는 것이 아닙니다.</p>
+  <p>이 구분을 반영하지 않고 무조건 1.5배를 안내하는 곳이 있는데, 5인 미만 사업장 근로자에게는 사실과 다른 정보입니다.</p>
+
+  <h2>상시 근로자 수는 어떻게 세나요</h2>
+  <p>사업장 단위로 셉니다. 정규직뿐 아니라 기간제·단시간 근로자도 포함하며, 산정 기간의 <b>연인원을 가동일수로 나누어</b> 계산합니다. 사업주와 동거하는 친족만 있는 사업장은 적용 대상이 아닙니다.</p>
+  <p>인원이 경계 부근에서 오르내린다면 판단이 갈릴 수 있으니 고용노동부나 노무사의 확인을 받아보시는 편이 안전합니다.</p>
+
+  <h2>통상임금에는 무엇이 들어가나요</h2>
+  <p>기본급과 정기적·일률적으로 지급되는 수당이 들어갑니다. 직책수당이나 자격수당처럼 매달 같은 조건으로 지급되는 항목이 해당합니다.</p>
+  <p>반면 성과에 따라 달라지는 상여금이나 실비 변상 성격의 금품은 보통 제외됩니다. 무엇이 통상임금인지는 다툼이 많은 영역이라, 금액이 크다면 급여명세서를 들고 전문가의 확인을 받는 편이 좋습니다.</p>
+
+  <h2>포괄임금제라 야근수당이 없다고 합니다</h2>
+  <p>포괄임금 약정이 있더라도 실제 근로시간에 따라 계산한 법정수당이 약정액보다 많으면 <b>차액을 청구할 수 있다</b>는 것이 판례의 태도입니다. 약정만으로 법정수당을 없앨 수는 없습니다.</p>
+  <p>임금채권의 소멸시효는 3년입니다. 근무 기록을 남겨두시면 나중에 다툴 때 근거가 됩니다.</p>
+</div>
+</main>
+
+<footer>
+  <p><!--STAMP:footer-->2026년 기준 · 국민연금 9.5%, 건강보험 7.19%, 장기요양 13.14%, 고용보험 1.8%, 최저임금 10,320원 · 자료 확인일 2026-08-18<!--/STAMP--></p>
+  <p>근거: 근로기준법 제11조·제56조, 같은 법 시행령 별표1. 참고용이며 법적 효력은 없습니다.</p>
+</footer>
+</div>
+<script src="/assets/engine.js"></script>
+<script src="/assets/app.js"></script>
+<script src="/assets/calc-page.js"></script>
+<script src="/assets/nav-transition.js"></script>
+<script>window.SN_PAGE({ mode: "overtime" });</script>
+</body>
+</html>
