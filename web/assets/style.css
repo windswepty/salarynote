@@ -284,11 +284,10 @@ main     { view-transition-name: sn-content; }
 /* 계산기가 7개가 되면서 모바일에서 내비가 넘친다.
    줄바꿈 대신 가로 스크롤로 처리한다 — 줄이 늘면 헤더 높이가 흔들려
    페이지 전환 애니메이션이 어색해지기 때문이다. */
-.nav {
-  overflow-x: auto;
-  scrollbar-width: none;          /* Firefox */
-  -webkit-overflow-scrolling: touch;
-  scroll-snap-type: x proximity;
-}
-.nav::-webkit-scrollbar { display: none; }
-.nav a { flex: 0 0 auto; scroll-snap-align: start; }
+/* 계산기가 12개가 되면서 한 줄에 들어가지 않는다.
+   가로 스크롤로 두면 화면 밖 항목이 있다는 것을 알아채기 어려워
+   뒤쪽 계산기들이 사실상 보이지 않는다(실제로 '육아휴직'부터 잘려 있었다).
+   줄바꿈으로 전부 보이게 한다. 헤더 높이는 화면 폭에 따라 달라지지만
+   같은 폭에서는 모든 페이지가 동일하므로 전환 애니메이션에는 영향이 없다. */
+.nav { flex-wrap: wrap; row-gap: var(--s2); overflow: visible; }
+.nav a { flex: 0 0 auto; }

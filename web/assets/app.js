@@ -58,14 +58,31 @@
     return null;
   }
 
+  /**
+   * 오류와 안내를 서로 다른 자리에 렌더한다.
+   *
+   * 오류는 결과 위에 둔다. 왜 결과가 나오지 않는지 설명해야 하기 때문이다.
+   * 안내는 결과 아래에 둔다. 예전에는 모두 결과 위에 쌓았는데, 실업급여는 안내가
+   * 7개까지 나와서 정작 보러 온 금액이 화면 밖으로 밀렸다. 답을 먼저 보여주고
+   * 주의사항은 그다음에 읽게 하는 것이 맞다.
+   *
+   * #notes 자리가 없는 페이지에서는 예전처럼 한 곳에 모두 넣는다(하위 호환).
+   */
   function renderNotices(list, container) {
-    container.innerHTML = "";
-    for (const n of list) {
-      const d = document.createElement("div");
-      d.className = "notice" + (n.kind === "err" ? " err" : "");
-      d.innerHTML = n.title ? `<b>${n.title}</b>${n.body}` : n.body;
-      container.appendChild(d);
-    }
+    const notes = document.getElementById("notes");
+    const fill = (el, items) => {
+      if (!el) return;
+      el.innerHTML = "";
+      for (const n of items) {
+        const d = document.createElement("div");
+        d.className = "notice" + (n.kind === "err" ? " err" : "");
+        d.innerHTML = n.title ? `<b>${n.title}</b>${n.body}` : n.body;
+        el.appendChild(d);
+      }
+    };
+    if (!notes) { fill(container, list); return; }
+    fill(container, list.filter((n) => n.kind === "err"));
+    fill(notes, list.filter((n) => n.kind !== "err"));
   }
 
   /** 계산 근거를 사람이 읽을 수 있는 목록으로. 이게 이 사이트의 차별점이라 항상 노출한다. */
