@@ -436,7 +436,8 @@
     if (el.nt) U.attachComma(el.nt);
     if (el.paydate) el.paydate.value = U.todayISO();
 
-    // 공유 링크 복원
+    // 예전에 만들어진 공유 링크로 들어온 경우의 값 복원 (하위 호환).
+    // 새로 주소를 만들지는 않는다.
     const q = new URLSearchParams(location.search);
     if (q.get("v")) el.salary.value = Number(q.get("v")).toLocaleString("ko-KR");
     if (el.dep && q.get("dep")) el.dep.value = q.get("dep");
@@ -483,7 +484,6 @@
         el.basisBox.style.display = items.length ? "" : "none";
         el.basis.innerHTML = items.map((s) => `<li>${s}</li>`).join("");
         U.renderNotices(notices, el.notices);
-        history.replaceState(null, "", "?v=" + v);
         return;
       }
 
@@ -540,8 +540,10 @@
       }
       U.renderNotices(notices, el.notices);
 
-      const nq = new URLSearchParams({ v: String(v), dep: String(input.dependents), nt: String(input.nonTaxable) });
-      history.replaceState(null, "", "?" + nq.toString());
+      // ★주소창을 자동으로 바꾸지 않는다.★
+      // 예전에는 계산할 때마다 ?v=...&dep=...&nt=... 을 주소에 썼는데,
+      // 브라우저 방문 기록에 급여가 그대로 남아 공용 PC 에서 유출될 수 있었다.
+      // 입력 한 글자마다 주소가 바뀌는 것도 산만했다.
     }
 
     for (const k of ["salary", "dep", "nt", "months", "paydate"])
