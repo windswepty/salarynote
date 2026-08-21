@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>최저임금 위반 확인 계산기 2026 | 샐러리노트</title>
+<meta name="description" content="내 월급이 최저임금에 미달하는지 확인합니다. 주휴수당을 포함한 시급 환산, 상여금·식대의 산입 범위, 수습 감액 요건까지 반영합니다.">
+<link rel="canonical" href="https://salarynote.pages.dev/minimum-wage/">
+<meta property="og:title" content="최저임금 위반 확인 계산기 2026 | 샐러리노트">
+<meta property="og:type" content="website"><meta property="og:locale" content="ko_KR">
+<link rel="stylesheet" href="/assets/style.css">
+<!--FAQ-->
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@type": "FAQPage",
+ "mainEntity": [
+  {
+   "@type": "Question",
+   "name": "왜 월급을 209시간으로 나누나요",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "최저임금 위반 여부는 시급으로 환산해 판단합니다. 그런데 월급에는 주휴수당이 이미 포함되어 있으므로, 나눌 때도 주휴시간을 포함한 월 소정근로시간을 써야 합니다. 주 40시간이면 실제 근로 약 174시간에 주휴 약 35시간을 더해 209시간이 됩니다. 주휴시간을 빼고 174시간으로 나누면 시급이 실제보다 높게 나와 위반인데도 아닌 것처럼 보입니다."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "식대와 상여금도 최저임금에 포함되나요",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "2024년부터는 전액 포함됩니다. 최저임금법 제6조 제4항 본문에는 상여금의 25%, 복리후생비의 7%를 빼도록 적혀 있지만, 법률 제15666호 부칙 제2조가 그 비율을 연도별로 낮춰 2024년부터 0으로 정했습니다. 즉 본문만 읽고 계산하면 위반 여부가 뒤집힙니다. 이 계산기는 부칙의 연도별 비율을 반영합니다."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "야근수당을 많이 받으면 위반이 아닌가요",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "아닙니다. 연장·야간·휴일근로수당은 소정근로시간 외 근로에 대한 임금이라 최저임금 산입 대상이 아닙니다(제6조 제4항 제1호). 야근을 아무리 많이 해도 기본급 자체가 최저임금에 미달하면 위반입니다. 야근수당으로 최저임금을 채울 수는 없습니다."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "수습이면 얼마까지 깎을 수 있나요",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "최저임금의 90%까지입니다. 다만 조건이 있습니다. 1년 이상의 근로계약을 맺어야 하고, 수습 시작일부터 3개월 이내여야 합니다. 계약기간이 1년 미만이면 수습이어도 감액할 수 없습니다. 또 단순노무업무 종사자는 수습 여부와 관계없이 감액이 금지됩니다."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "미달이면 어떻게 되나요",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "최저임금에 미치지 못하는 부분은 무효이며, 그 부분은 최저임금액과 같은 임금을 지급하기로 한 것으로 봅니다(제6조 제3항). 즉 차액을 청구할 수 있습니다. 임금채권의 소멸시효는 3년입니다. 고용노동부에 진정을 넣거나 노동위원회 절차를 이용할 수 있습니다. 급여명세서와 근로계약서를 보관해 두시면 근거가 됩니다."
+   }
+  }
+ ]
+}
+</script>
+<!--/FAQ-->
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="brand" href="/">샐러리노트</a>
+  <nav class="nav">
+    <a href="/">연봉<span class="bar"></span></a>
+    <a href="/monthly-salary/">월급<span class="bar"></span></a>
+    <a href="/four-insurance/">4대보험<span class="bar"></span></a>
+    <a href="/severance-pay/">퇴직금<span class="bar"></span></a>
+    <a href="/weekly-holiday-pay/">주휴수당<span class="bar"></span></a>
+    <a href="/annual-leave/">연차<span class="bar"></span></a>
+    <a href="/wage-converter/">환산<span class="bar"></span></a>
+    <a href="/overtime-pay/">야근수당<span class="bar"></span></a>
+    <a href="/minimum-wage/" aria-current="page">최저임금<span class="bar"></span></a>
+    <a href="/part-time/">알바<span class="bar"></span></a>
+    <a href="/unemployment/">실업급여<span class="bar"></span></a>
+  </nav>
+  <div class="ptitle">
+  <h1>최저임금 위반 확인</h1>
+  <p class="sub">주휴수당과 산입 범위를 반영해 실제 시급을 계산합니다.</p>
+  </div>
+</header>
+
+<main class="content">
+<div class="card">
+  <div class="row">
+    <div class="field">
+      <label for="mwBase">기본급·고정수당 <span class="hint">(매월 정기 지급, 원)</span></label>
+      <input id="mwBase" type="text" inputmode="numeric" autocomplete="off" value="2,000,000">
+    </div>
+    <div class="field">
+      <label for="mwWeekly">1주 소정근로시간 <span class="hint">(시간)</span></label>
+      <input id="mwWeekly" type="number" min="1" max="68" step="0.5" value="40">
+    </div>
+  </div>
+  <div class="row">
+    <div class="field">
+      <label for="mwWelfare">식대·교통비 <span class="hint">(매월 지급분, 원)</span></label>
+      <input id="mwWelfare" type="text" inputmode="numeric" autocomplete="off" value="200,000">
+    </div>
+    <div class="field">
+      <label for="mwBonus">매월 지급 상여금 <span class="hint">(원)</span></label>
+      <input id="mwBonus" type="text" inputmode="numeric" autocomplete="off" value="0">
+    </div>
+  </div>
+  <div class="row">
+    <div class="field">
+      <label for="mwOvertime">연장·야간·휴일수당 <span class="hint">(산입 안 됨, 원)</span></label>
+      <input id="mwOvertime" type="text" inputmode="numeric" autocomplete="off" value="0">
+    </div>
+    <div class="field">
+      <label for="mwProbation">수습 여부</label>
+      <select id="mwProbation">
+        <option value="N">수습 아님</option>
+        <option value="Y">수습 중 (3개월 이내)</option>
+      </select>
+    </div>
+  </div>
+  <details>
+    <summary>수습 감액 요건</summary>
+    <div class="body">
+      <div class="row" style="margin-top:10px">
+        <div class="field">
+          <label for="mwContract">근로계약 기간 <span class="hint">(개월)</span></label>
+          <input id="mwContract" type="number" min="0" max="600" step="1" value="12">
+        </div>
+        <div class="field">
+          <label for="mwSimple">단순노무업무 여부</label>
+          <select id="mwSimple">
+            <option value="N">해당 없음</option>
+            <option value="Y">단순노무업무</option>
+          </select>
+        </div>
+      </div>
+      <p>수습 감액은 <b>1년 이상 근로계약</b>을 맺고 수습 시작일부터 3개월 이내일 때만 가능합니다. 계약기간이 1년 미만이거나 단순노무업무 종사자라면 감액할 수 없습니다.</p>
+    </div>
+  </details>
+</div>
+
+<div id="notices"></div>
+
+<div class="card result">
+  <div class="cap">환산 시급</div>
+  <div class="big" id="out">—</div>
+  <div class="side" id="side"></div>
+</div>
+
+<div class="card">
+  <table><tbody id="breakdown"></tbody></table>
+  <details id="basisBox"><summary>계산 근거 보기</summary><div class="body"><ul id="basis"></ul></div></details>
+</div>
+
+<div class="ad"></div>
+
+<div class="card prose">
+  <h2>왜 월급을 209시간으로 나누나요</h2>
+  <p>최저임금 위반 여부는 <b>시급으로 환산해</b> 판단합니다. 그런데 월급에는 주휴수당이 이미 포함되어 있으므로, 나눌 때도 주휴시간을 포함한 월 소정근로시간을 써야 합니다.</p>
+  <p>주 40시간이면 실제 근로 약 174시간에 주휴 약 35시간을 더해 209시간이 됩니다. 주휴시간을 빼고 174시간으로 나누면 시급이 실제보다 높게 나와 <b>위반인데도 아닌 것처럼</b> 보입니다.</p>
+
+  <h2>식대와 상여금도 최저임금에 포함되나요</h2>
+  <p><b>2024년부터는 전액 포함됩니다.</b> 최저임금법 제6조 제4항 본문에는 상여금의 25%, 복리후생비의 7%를 빼도록 적혀 있지만, 법률 제15666호 부칙 제2조가 그 비율을 연도별로 낮춰 <b>2024년부터 0으로</b> 정했습니다.</p>
+  <p>즉 본문만 읽고 계산하면 위반 여부가 뒤집힙니다. 이 계산기는 부칙의 연도별 비율을 반영합니다.</p>
+
+  <h2>야근수당을 많이 받으면 위반이 아닌가요</h2>
+  <p>아닙니다. 연장·야간·휴일근로수당은 <b>소정근로시간 외 근로</b>에 대한 임금이라 최저임금 산입 대상이 아닙니다(제6조 제4항 제1호).</p>
+  <p>야근을 아무리 많이 해도 기본급 자체가 최저임금에 미달하면 위반입니다. 야근수당으로 최저임금을 채울 수는 없습니다.</p>
+
+  <h2>수습이면 얼마까지 깎을 수 있나요</h2>
+  <p>최저임금의 <b>90%</b>까지입니다. 다만 조건이 있습니다. <b>1년 이상의 근로계약</b>을 맺어야 하고, 수습 시작일부터 <b>3개월 이내</b>여야 합니다.</p>
+  <p>계약기간이 1년 미만이면 수습이어도 감액할 수 없습니다. 또 단순노무업무 종사자는 수습 여부와 관계없이 감액이 금지됩니다.</p>
+
+  <h2>미달이면 어떻게 되나요</h2>
+  <p>최저임금에 미치지 못하는 부분은 <b>무효</b>이며, 그 부분은 최저임금액과 같은 임금을 지급하기로 한 것으로 봅니다(제6조 제3항). 즉 차액을 청구할 수 있습니다.</p>
+  <p>임금채권의 소멸시효는 3년입니다. 고용노동부에 진정을 넣거나 노동위원회 절차를 이용할 수 있습니다. 급여명세서와 근로계약서를 보관해 두시면 근거가 됩니다.</p>
+
+  <h2>계산 결과가 애매하게 나옵니다</h2>
+  <p>어떤 수당이 <b>매월 정기적으로</b> 지급되는지가 판단을 가릅니다. 명절 상여처럼 특정 시기에만 나오는 금품은 매월 지급이 아니어서 산입되지 않습니다.</p>
+  <p>또 무엇이 소정근로에 대한 임금인지는 다툼의 여지가 있습니다. 금액이 경계에 가깝다면 급여명세서를 들고 고용노동부나 노무사의 확인을 받아보시길 권합니다.</p>
+</div>
+</main>
+
+<footer>
+  <p><!--STAMP:footer-->2026년 기준 · 국민연금 9.5%, 건강보험 7.19%, 장기요양 13.14%, 고용보험 1.8%, 최저임금 10,320원 · 자료 확인일 2026-08-18<!--/STAMP--></p>
+  <p>근거: 최저임금법 제5조·제6조, 법률 제15666호 부칙 제2조. 참고용이며 법적 효력은 없습니다.</p>
+</footer>
+</div>
+<script src="/assets/engine.js"></script>
+<script src="/assets/app.js"></script>
+<script src="/assets/calc-page.js"></script>
+<script src="/assets/nav-transition.js"></script>
+<script>window.SN_PAGE({ mode: "minwage" });</script>
+</body>
+</html>

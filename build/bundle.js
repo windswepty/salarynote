@@ -115,7 +115,7 @@ console.log(`원장: ${path.basename(LEDGER.ledgerPath)} (${LEDGER.year}년)`);
   }
 }
 
-const MODULES = ["insurance.js", "income-tax.js", "net-pay.js", "severance.js", "work-allowance.js", "parttime.js", "overtime.js", "unemployment.js"];
+const MODULES = ["insurance.js", "income-tax.js", "net-pay.js", "severance.js", "work-allowance.js", "parttime.js", "overtime.js", "minwage.js", "unemployment.js"];
 
 const wrapped = MODULES.map((name) => {
   let src = read(path.join("src/engine", name));
@@ -156,6 +156,7 @@ ${wrapped}
     convertWage: __mod["work-allowance.js"].convertWage,
     calcPartTimePay: __mod["parttime.js"].calcPartTimePay,
     calcOvertimePay: __mod["overtime.js"].calcOvertimePay,
+    checkMinimumWage: __mod["minwage.js"].checkMinimumWage,
     calcUnemploymentBenefit: __mod["unemployment.js"].calcUnemploymentBenefit,
     benefitDaysTable: __mod["unemployment.js"].benefitDaysTable,
   };

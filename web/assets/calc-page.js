@@ -334,6 +334,45 @@
     calc();
   }
 
+  /** 최저임금 위반 확인 — 산입 범위와 주휴시간 포함 환산이 핵심이다. */
+  function initMinWage() {
+    const el = shell();
+    const g = (id) => document.getElementById(id);
+    for (const id of ["mwBase", "mwWelfare", "mwBonus", "mwOvertime"]) U.attachComma(g(id));
+
+    const calc = () => {
+      try {
+        const r = SN.checkMinimumWage({
+          monthlyBasePay: U.parseNum(g("mwBase")),
+          monthlyWelfare: U.parseNum(g("mwWelfare")) || 0,
+          monthlyBonus: U.parseNum(g("mwBonus")) || 0,
+          overtimePay: U.parseNum(g("mwOvertime")) || 0,
+          weeklyHours: blankToUndefined(g("mwWeekly").value),
+          probation: g("mwProbation").value === "Y",
+          contractMonths: blankToUndefined(g("mwContract").value),
+          simpleLabor: g("mwSimple").value === "Y",
+        }, SN.rates);
+
+        simpleRender(el, r.effectiveHourly,
+          r.violation
+            ? "최저임금 미달 — 월 " + U.won(r.shortfall) + "원 부족"
+            : "최저임금 이상 — 위반 아님",
+          [["산입 임금", U.won(r.includedWage) + "원"],
+           ["월 소정근로시간", r.monthlyHours + "시간 (주휴 포함)"],
+           ["환산 시급", U.won(r.effectiveHourly) + "원"],
+           ["비교 기준", U.won(r.appliedMinHourly) + "원" + (r.probationApplied ? " (수습 90%)" : "")],
+           ["판정", r.violation ? "위반" : "위반 아님", "sum"],
+           ["부족액 (월)", r.violation ? U.won(r.shortfall) + "원" : "없음"]],
+          r.basis, r.warnings);
+      } catch (e) { fail(el, e); }
+    };
+    bindAll(["mwBase", "mwWelfare", "mwBonus", "mwOvertime", "mwWeekly",
+             "mwProbation", "mwContract", "mwSimple"], calc);
+    g("mwProbation").addEventListener("change", calc);
+    g("mwSimple").addEventListener("change", calc);
+    calc();
+  }
+
   window.SN_PAGE = function (opts) {
     const mode = opts.mode; // "annual" | "monthly" | "insurance" | "severance"
     if (mode === "severance") return initSeverance();
@@ -343,6 +382,7 @@
     if (mode === "convert") return initConvert();
     if (mode === "parttime") return initPartTime();
     if (mode === "overtime") return initOvertime();
+    if (mode === "minwage") return initMinWage();
     const el = {
       salary: U.$("#salary") || U.$("#base"),
       dep: U.$("#dep"), nt: U.$("#nt"), months: U.$("#months"), paydate: U.$("#paydate"),
