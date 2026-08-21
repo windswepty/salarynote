@@ -1,22 +1,28 @@
 """
-파비콘을 생성한다.  python tools/make-favicon.py
+파비콘과 로고 마크를 생성한다.  python tools/make-favicon.py
 
 만드는 것
-  web/favicon.svg          최신 브라우저용 (벡터, 항상 선명하다)
+  web/favicon.svg          브라우저 탭·상단바 로고 (벡터, 항상 선명하다)
   web/favicon.ico          구형 브라우저와 즐겨찾기용 (16·32·48 세 장을 담는다)
   web/apple-touch-icon.png 아이폰 홈 화면 추가용 (180px)
 
-디자인
-  '샐러리노트' 라서 노트와 돈을 같이 담는다. 다만 파비콘은 실제로 16px 로
-  보이는 물건이라 요소가 둘을 넘어가면 뭉개진다. 그래서
-    - 왼쪽 세로 띠  = 노트 제본. 폭이 좁아 작게 줄여도 형태가 남는다.
-    - 흰색 ₩       = 돈. 남는 폭을 최대한 차지하게 크게 그린다.
-  둘뿐이고 서로 겹치지 않아 16px 에서도 실루엣이 구분된다.
+디자인 — 두 번 덜어냈다
+  1차: '샐러리노트' 라서 노트 제본 띠와 고리까지 넣었다. 그런데 이 마크가 실제로
+  놓이는 자리는 브라우저 탭(16px)과 상단바 로고(22px)다. 그 크기에서 띠·고리·W·
+  가로줄 다섯 요소가 뭉쳐 파란 사각형 위의 흰 얼룩이 됐다. 노트 요소를 버렸다.
 
-  ★16px 만 가로줄을 하나로 줄인다.★
-  ₩ 의 가로줄 둘은 64px 기준 8.5 단위 떨어져 있는데, 16px 로 줄이면 간격이
-  2px 가 안 돼 두 줄이 한 덩어리로 뭉친다. 그러면 ₩ 가 아니라 얼룩으로 보인다.
-  글꼴이 크기별로 굵기를 달리 파는 것과 같은 이유다. 32px 이상은 원안 그대로다.
+  2차: ₩ 만 남겼는데도 22px 에서 뭉갰다. 원인은 가로줄 두 개였다. 64px 기준
+  8 단위 간격은 22px 로 줄이면 2.7px 가 되고, 획 굵기를 빼면 줄 사이 틈이 1px 도
+  안 남아 한 덩어리로 보인다. 간격을 11까지 벌리고 획을 3.2 까지 얇혀 봤지만
+  22px 에서는 끝내 살아나지 않았다. 두 줄짜리 ₩ 는 28px 아래에서 성립하지 않는다.
+
+  그래서 ★가로줄을 하나로 고정했다.★ 크기별로 다른 그림을 쓰면 탭과 로고와 홈
+  화면 아이콘이 서로 다른 마크가 되므로, 작은 쪽에서 성립하는 형태 하나로 통일한
+  것이다. 한 줄짜리 ₩ 는 128px 에서도 어색하지 않고 16px 에서도 형태가 버틴다.
+
+  ★가운데 봉우리는 바깥 획 높이 가까이 올린다.★ 낮게 두면 가로줄에 파묻히고
+  바깥 획만 위로 솟아 더듬이처럼 보인다. 실제로 그렇게 만들었다가 32px 에서
+  글자가 아니라 벌레로 읽혔다.
 
   좌표를 이 파일 한 곳에만 두고 SVG 와 PNG 를 같은 숫자로 그린다.
   따로 관리하면 한쪽만 고쳐져 아이콘 두 종류가 생긴다.
@@ -31,63 +37,32 @@ WEB = os.path.join(ROOT, "web")
 
 # ── 좌표 (64×64 기준) ────────────────────────────────────────────
 BOX = 64
-RADIUS = 14
+RADIUS = 15
 
-BLUE = (26, 86, 219)          # style.css 의 --accent 와 같은 값
-SPINE = (255, 255, 255, 56)   # 파랑 위에 흰색을 옅게 얹어 제본을 만든다
+BLUE = (26, 86, 219)   # style.css 의 --accent 와 같은 값
 WHITE = (255, 255, 255)
 
-SPINE_W = 9
+# ₩ 의 W. 가운데 봉우리(32, 25)가 바깥 끝(20)에 가깝다.
+W_PTS = [(15, 20), (23, 45), (32, 25), (41, 45), (49, 20)]
+W_STROKE = 5.5
 
-# 제본 고리. 32px 이상에서 노트로 읽히게 하는 요소다.
-# 16px 에서는 띠에 녹아 밝기만 살짝 올라가고 형태는 사라진다. 손해가 없어서
-# '큰 화면에서만 보이는 디테일' 로 넣는다.
-RING_X0, RING_X1 = 2.0, 7.0
-RING_Y = (15.0, 32.0, 49.0)
-RING_STROKE = 3.5
-
-# ₩ 의 W. 바깥에서 시작해 가운데를 찍고 다시 올라간다.
-W_PTS = [(18, 19), (27, 46), (37, 27), (47, 46), (56, 19)]
-W_STROKE = 6
-
-# ₩ 의 가로줄. 위아래 두 줄이 W 를 가로지른다.
-BAR_X0, BAR_X1 = 14, 60
-BAR_Y = (30.0, 38.5)
-BAR_STROKE = 5
-
-# 16px 전용. 줄 하나만 남기고 조금 굵힌다.
-BAR_Y_SMALL = (34.0,)
-BAR_STROKE_SMALL = 6
+# ₩ 의 가로줄. 하나뿐인 이유는 파일 상단 주석 참조.
+# W 보다 좌우로 조금 더 빼야 장식이 아니라 글자로 읽힌다.
+BAR_X0, BAR_X1 = 11, 53
+BAR_Y = 33.5
+BAR_STROKE = 4.6
 
 
 def svg() -> str:
-    """벡터 원본. 큰 화면에서는 이쪽이 쓰인다."""
+    """벡터 원본. 탭 아이콘과 상단바 로고가 모두 이 파일을 쓴다."""
     pts = " ".join(f"{x},{y}" for x, y in W_PTS)
-    rings = "\n".join(
-        f'    <line x1="{RING_X0}" y1="{y}" x2="{RING_X1}" y2="{y}" stroke="#fff"'
-        f' stroke-width="{RING_STROKE}" stroke-linecap="round" opacity="0.75"/>'
-        for y in RING_Y
-    )
-    bars = "\n".join(
-        f'    <line x1="{BAR_X0}" y1="{y}" x2="{BAR_X1}" y2="{y}"/>'
-        for y in BAR_Y
-    )
+    fill = "#%02x%02x%02x" % BLUE
     return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {BOX} {BOX}" role="img" aria-label="샐러리노트">
   <title>샐러리노트</title>
-  <defs>
-    <clipPath id="r">
-      <rect width="{BOX}" height="{BOX}" rx="{RADIUS}"/>
-    </clipPath>
-  </defs>
-  <g clip-path="url(#r)">
-    <rect width="{BOX}" height="{BOX}" fill="#{BLUE[0]:02x}{BLUE[1]:02x}{BLUE[2]:02x}"/>
-    <!-- 노트 제본 -->
-    <rect width="{SPINE_W}" height="{BOX}" fill="#fff" opacity="{SPINE[3] / 255:.3f}"/>
-{rings}
-  </g>
+  <rect width="{BOX}" height="{BOX}" rx="{RADIUS}" fill="{fill}"/>
   <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round">
     <polyline points="{pts}" stroke-width="{W_STROKE}"/>
-{bars}
+    <line x1="{BAR_X0}" y1="{BAR_Y}" x2="{BAR_X1}" y2="{BAR_Y}" stroke-width="{BAR_STROKE}"/>
   </g>
 </svg>
 """
@@ -101,47 +76,25 @@ def raster(size: int) -> Image.Image:
 
     img = Image.new("RGBA", (n, n), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-
     d.rounded_rectangle([0, 0, n - 1, n - 1], radius=RADIUS * k, fill=BLUE + (255,))
 
-    # 제본 띠. 둥근 모서리 밖으로 삐져나가지 않게 배경 알파로 잘라낸다.
-    band = Image.new("RGBA", (n, n), (0, 0, 0, 0))
-    ImageDraw.Draw(band).rectangle([0, 0, SPINE_W * k, n], fill=SPINE)
-    band.putalpha(Image.composite(
-        band.getchannel("A"), Image.new("L", (n, n), 0), img.getchannel("A")))
-    img.alpha_composite(band)
-
-    rr = RING_STROKE * k / 2
-    for y in RING_Y:
-        d.line([(RING_X0 * k, y * k), (RING_X1 * k, y * k)],
-               fill=WHITE + (191,), width=round(RING_STROKE * k))
-        for x in (RING_X0, RING_X1):
-            d.ellipse([x * k - rr, y * k - rr, x * k + rr, y * k + rr], fill=WHITE + (191,))
-
-    # 작은 크기에서는 가로줄을 하나로 줄인다. 이유는 파일 상단 주석 참조.
-    bars = BAR_Y_SMALL if size <= 16 else BAR_Y
-    bar_w = BAR_STROKE_SMALL if size <= 16 else BAR_STROKE
-
-    d.line([(x * k, y * k) for x, y in W_PTS],
-           fill=WHITE + (255,), width=round(W_STROKE * k), joint="curve")
-    # PIL 은 선 끝을 둥글게 못 깎아서 꼭짓점에 원을 직접 얹는다.
-    r = W_STROKE * k / 2
-    for x, y in W_PTS:
-        d.ellipse([x * k - r, y * k - r, x * k + r, y * k + r], fill=WHITE + (255,))
-
-    r = bar_w * k / 2
-    for y in bars:
-        d.line([(BAR_X0 * k, y * k), (BAR_X1 * k, y * k)],
-               fill=WHITE + (255,), width=round(bar_w * k))
-        for x in (BAR_X0, BAR_X1):
+    def stroke(points, width):
+        """PIL 은 선 끝을 둥글게 못 깎아서 꼭짓점마다 원을 얹어 흉내낸다."""
+        d.line([(x * k, y * k) for x, y in points],
+               fill=WHITE + (255,), width=round(width * k), joint="curve")
+        r = width * k / 2
+        for x, y in points:
             d.ellipse([x * k - r, y * k - r, x * k + r, y * k + r], fill=WHITE + (255,))
+
+    stroke(W_PTS, W_STROKE)
+    stroke([(BAR_X0, BAR_Y), (BAR_X1, BAR_Y)], BAR_STROKE)
 
     return img.resize((size, size), Image.LANCZOS)
 
 
 def main() -> None:
-    p = os.path.join(WEB, "favicon.svg")
-    io.open(p, "w", encoding="utf-8", newline="\n").write(svg())
+    io.open(os.path.join(WEB, "favicon.svg"), "w",
+            encoding="utf-8", newline="\n").write(svg())
     print("favicon.svg")
 
     # .ico 는 여러 크기를 한 파일에 담는다. 브라우저가 상황에 맞는 걸 고른다.
@@ -157,11 +110,14 @@ def main() -> None:
     # 눈으로 확인할 미리보기. 배포에는 넣지 않는다.
     prev = os.environ.get("FAVICON_PREVIEW")
     if prev:
-        strip = Image.new("RGBA", (16 + 32 + 64 + 128 + 40, 128), (255, 255, 255, 255))
-        x = 0
-        for s in (16, 32, 64, 128):
-            strip.alpha_composite(raster(s), (x, 128 - s))
-            x += s + 10
+        shown = (16, 22, 32, 64, 128)
+        pad = 12
+        w = sum(shown) + pad * (len(shown) + 1)
+        strip = Image.new("RGBA", (w, 128 + pad * 2), (255, 255, 255, 255))
+        x = pad
+        for sz in shown:
+            strip.alpha_composite(raster(sz), (x, pad + 128 - sz))
+            x += sz + pad
         strip.save(prev)
         print("미리보기:", prev)
 
