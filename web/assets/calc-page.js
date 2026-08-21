@@ -373,6 +373,46 @@
     calc();
   }
 
+  /** 육아휴직 급여 — 개월차별 구간과 상·하한을 표에 드러낸다. */
+  function initParental() {
+    const el = shell();
+    const g = (id) => document.getElementById(id);
+    U.attachComma(g("plWage"));
+
+    // 기본값: 다음 달 1일 (지원 범위 시작일보다 앞서지 않게)
+    if (!g("plStart").value) {
+      const d = new Date();
+      const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0");
+      g("plStart").value = `${y}-${m}-01`;
+    }
+
+    const calc = () => {
+      try {
+        const r = SN.calcParentalLeave({
+          monthlyOrdinaryWage: U.parseNum(g("plWage")),
+          leaveStartDate: g("plStart").value,
+          months: blankToUndefined(g("plMonths").value),
+          singleParent: g("plSingle").value === "Y",
+        }, SN.parentalLeave);
+
+        const rows = r.bySegment.map((s) => [
+          s.label + " (" + (s.rate * 100) + "%)",
+          s.months + "개월 × " + U.won(s.perMonth) + "원 = " + U.won(s.subtotal) + "원",
+        ]);
+        rows.push(["총 예상 수령액", U.won(r.total) + "원", "sum"]);
+        if (r.capBoundCount) rows.push(["상한 적용", r.capBoundCount + "개월분"]);
+        if (r.floorBoundCount) rows.push(["하한 적용", r.floorBoundCount + "개월분"]);
+
+        simpleRender(el, r.total,
+          r.months + "개월 · " + (r.singleParent ? "한부모 특례" : "일반 규정"),
+          rows, r.basis, r.warnings);
+      } catch (e) { fail(el, e); }
+    };
+    bindAll(["plWage", "plStart", "plMonths", "plSingle"], calc);
+    g("plSingle").addEventListener("change", calc);
+    calc();
+  }
+
   window.SN_PAGE = function (opts) {
     const mode = opts.mode; // "annual" | "monthly" | "insurance" | "severance"
     if (mode === "severance") return initSeverance();
@@ -383,6 +423,7 @@
     if (mode === "parttime") return initPartTime();
     if (mode === "overtime") return initOvertime();
     if (mode === "minwage") return initMinWage();
+    if (mode === "parental") return initParental();
     const el = {
       salary: U.$("#salary") || U.$("#base"),
       dep: U.$("#dep"), nt: U.$("#nt"), months: U.$("#months"), paydate: U.$("#paydate"),

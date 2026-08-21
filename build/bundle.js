@@ -36,6 +36,8 @@ const { resolve, assertYearMatchesContent } = require("../tools/lib/resolve-ledg
 const LEDGER = resolve();
 const readAbs = (abs) => fs.readFileSync(abs, "utf8").split(CR).join("");
 const rates = readAbs(LEDGER.ledgerPath);
+// 육아휴직 급여 원장. 연도별 파일이 아니라 제도 단위 파일이라 경로가 고정이다.
+const parental = readAbs(path.join(ROOT, "data", "parental-leave-2026.json"));
 const table = readAbs(LEDGER.taxTablePath);
 assertYearMatchesContent(LEDGER, JSON.parse(rates));
 
@@ -115,7 +117,7 @@ console.log(`원장: ${path.basename(LEDGER.ledgerPath)} (${LEDGER.year}년)`);
   }
 }
 
-const MODULES = ["insurance.js", "income-tax.js", "net-pay.js", "severance.js", "work-allowance.js", "parttime.js", "overtime.js", "minwage.js", "unemployment.js"];
+const MODULES = ["insurance.js", "income-tax.js", "net-pay.js", "severance.js", "work-allowance.js", "parttime.js", "overtime.js", "minwage.js", "parental-leave.js", "unemployment.js"];
 
 const wrapped = MODULES.map((name) => {
   let src = read(path.join("src/engine", name));
@@ -157,6 +159,8 @@ ${wrapped}
     calcPartTimePay: __mod["parttime.js"].calcPartTimePay,
     calcOvertimePay: __mod["overtime.js"].calcOvertimePay,
     checkMinimumWage: __mod["minwage.js"].checkMinimumWage,
+    calcParentalLeave: __mod["parental-leave.js"].calcParentalLeave,
+    parentalLeave: ${parental},
     calcUnemploymentBenefit: __mod["unemployment.js"].calcUnemploymentBenefit,
     benefitDaysTable: __mod["unemployment.js"].benefitDaysTable,
   };
