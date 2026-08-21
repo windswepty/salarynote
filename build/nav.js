@@ -11,12 +11,12 @@ const PAGES = require("./pages.js");
 const WEB = path.join(__dirname, "..", "web");
 const items = PAGES.filter((p) => p.nav);
 
-function navHtml(currentUrl) {
+function navHtml(currentUrl, pad) {
   const links = items.map((p) => {
     const cur = p.url === currentUrl ? ' aria-current="page"' : "";
-    return `    <a href="${p.url}"${cur}>${p.nav}<span class="bar"></span></a>`;
+    return `${pad}  <a href="${p.url}"${cur}>${p.nav}<span class="bar"></span></a>`;
   });
-  return `  <nav class="nav">\n${links.join("\n")}\n  </nav>`;
+  return `${pad}<nav class="nav">\n${links.join("\n")}\n${pad}</nav>`;
 }
 
 function walk(dir, out = []) {
@@ -37,7 +37,9 @@ for (const file of walk(WEB)) {
   const rel = "/" + path.relative(WEB, file).split(path.sep).join("/");
   const url = rel.replace(/index\.html$/, "");
 
-  const next = src.replace(/  <nav class="nav">[\s\S]*?<\/nav>/, navHtml(url));
+  // 들여쓰기를 고정하면 상단바 구조가 바뀔 때 조용히 어긋난다. 실제 들여쓰기를 읽어 따라간다.
+  const pad = (src.match(/^([ \t]*)<nav class="nav">/m) || [, "  "])[1];
+  const next = src.replace(/^[ \t]*<nav class="nav">[\s\S]*?<\/nav>/m, navHtml(url, pad));
   if (next !== src) { fs.writeFileSync(file, next, "utf8"); changed++; }
 }
 

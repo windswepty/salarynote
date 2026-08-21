@@ -89,6 +89,31 @@ t("애드센스 코드가 모든 페이지에 심어져 있다", () => {
     { cwd: ROOT, stdio: "pipe" });
 });
 
+t("파비콘 태그와 파일이 모두 있다", () => {
+  execFileSync(process.execPath, [path.join(ROOT, "build", "favicon.js"), "--check"],
+    { cwd: ROOT, stdio: "pipe" });
+  // 태그만 있고 파일이 없으면 404 만 늘어난다. 로고로도 쓰는 svg 는 특히 눈에 띈다.
+  for (const f of ["favicon.ico", "favicon.svg", "apple-touch-icon.png"])
+    assert.ok(fs.existsSync(path.join(WEB, f)), `web/${f} 가 없다`);
+});
+
+t("상단바 구조가 전환 스크립트의 가정과 맞는다", () => {
+  // nav-transition.js 는 .ptitle 과 main 만 갈아끼우고 .nav 는 aria-current 만
+  // 고친다. 내비가 교체 대상 안으로 들어가면 전환 중에 통째로 사라져
+  // 밑줄 애니메이션이 깨진다. 상단바가 .wrap 밖에 있어야 하는 이유다.
+  for (const f of htmls) {
+    const s = fs.readFileSync(f, "utf8");
+    if (!s.includes('class="nav"')) continue;
+    const rel = path.relative(WEB, f);
+    const bar = s.indexOf('<header class="topbar">');
+    const wrap = s.indexOf('<div class="wrap">');
+    assert.ok(bar >= 0, `${rel}: 상단바가 없다`);
+    assert.ok(bar < wrap, `${rel}: 상단바가 .wrap 안에 있다`);
+    assert.ok(s.indexOf('class="nav"') < wrap, `${rel}: 내비가 .wrap 안에 있다`);
+    assert.ok(s.indexOf('class="ptitle"') > wrap, `${rel}: ptitle 이 .wrap 밖에 있다`);
+  }
+});
+
 t("게시자 ID 가 원장 밖에 하드코딩돼 있지 않다", () => {
   // HTML 과 ads.txt 는 생성물이라 당연히 들어 있다. 그 밖의 소스에 박혀 있으면
   // ID 를 바꿀 때 한쪽만 바뀌어 조용히 어긋난다.

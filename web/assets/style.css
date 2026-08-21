@@ -14,6 +14,8 @@
   --line-2:  #d3d7de;
   --accent:  #1a56db;
   --accent-w:#eef3fd;
+  --topbar:     #f5f8fe;   /* 흰 배경에 --accent 를 아주 옅게 섞은 값 */
+  --topbar-line:#dde5f7;
   --warn:    #8a6d1f;
   --warn-bg: #fdfaf1;
   --warn-line:#e8dcb8;
@@ -36,6 +38,8 @@
     --line-2:  #333944;
     --accent:  #7ba4f5;
     --accent-w:#151d2c;
+    --topbar:     #141821;   /* 어두운 배경에서는 밝히지 않고 파란 기운만 얹는다 */
+    --topbar-line:#242b39;
     --warn:    #d8b563;
     --warn-bg: #1e1b12;
     --warn-line:#3a3320;
@@ -61,18 +65,37 @@ body {
 .wrap { max-width: 640px; margin: 0 auto; padding: 0 var(--s5) var(--s8); }
 @media (max-width: 520px) { .wrap { padding: 0 var(--s4) var(--s7); } }
 
-/* ---------- 헤더 ---------- */
-header { padding: var(--s6) 0 var(--s5); }
-.brand {
-  display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .06em;
-  text-transform: uppercase; color: var(--muted); text-decoration: none;
+/* ---------- 상단바 ----------
+   본문은 640px 로 좁게 두는 게 읽기 좋지만, 상단바까지 640px 안에 있으면
+   넓은 화면에서 '바' 로 보이지 않고 양옆이 그냥 빈 공간이 된다. 게다가
+   계산기 12개가 640px 에 안 들어가 내비가 두 줄로 걸쳤다.
+   상단바만 화면 전체 폭을 쓰게 하고 안쪽 내용은 1040px 로 둔다. 그러면
+   양옆 여백이 '남은 자리' 가 아니라 '의도한 여백' 으로 읽힌다.
+
+   색은 배경에 브랜드 파랑을 아주 옅게 섞어 만든다. 면을 통째로 파랗게
+   칠하지 않는 이유는, 급여를 다루는 화면에서 색이 세면 정보보다 장식이
+   먼저 보이기 때문이다. 파랑은 로고와 '현재 위치' 표시에만 진하게 쓴다. */
+.topbar {
+  background: var(--topbar);
+  border-bottom: 1px solid var(--topbar-line);
+  margin-bottom: var(--s6);
 }
-.brand:hover { color: var(--ink); }
+.topbar-in { max-width: 1040px; margin: 0 auto; padding: var(--s4) var(--s5) 0; }
+@media (max-width: 520px) { .topbar-in { padding: var(--s3) var(--s4) 0; } }
+
+.brand {
+  display: inline-flex; align-items: center; gap: var(--s2);
+  font-size: 15px; font-weight: 700; letter-spacing: -.02em;
+  color: var(--ink); text-decoration: none;
+}
+.brand-mark { display: block; width: 22px; height: 22px; border-radius: 5px; }
+.brand:hover { color: var(--accent); }
 h1 {
   font-size: 27px; font-weight: 700; letter-spacing: -.035em;
   line-height: 1.25; margin: var(--s4) 0 var(--s2);
 }
 .sub { color: var(--muted); font-size: 14px; margin: 0; word-break: keep-all; }
+.ptitle { padding-bottom: var(--s5); }
 
 /* ---------- 구획: 카드가 아니라 헤어라인 ---------- */
 .card { border-top: 1px solid var(--line); padding: var(--s5) 0; margin: 0; }
@@ -216,17 +239,17 @@ footer p { margin: 0 0 var(--s1); word-break: keep-all; }
    밑줄은 별도 엘리먼트다. 그래야 페이지가 바뀔 때
    위치를 '이동'시킬 수 있다(::after 로는 불가능).
    ============================================================ */
-.nav { display: flex; gap: var(--s5); margin-top: var(--s3); font-size: 14px; letter-spacing: -.01em; }
+.nav { display: flex; gap: var(--s5); margin-top: var(--s4); font-size: 14px; letter-spacing: -.01em; }
 .nav a {
   position: relative; color: var(--muted); text-decoration: none;
-  font-weight: 500; padding-bottom: 7px; transition: color .18s ease;
+  font-weight: 500; padding-bottom: 11px; transition: color .18s ease;
 }
 .nav a:hover { color: var(--ink-2); }
-.nav a[aria-current="page"] { color: var(--ink); font-weight: 600; }
+.nav a[aria-current="page"] { color: var(--accent); font-weight: 600; }
 
 .nav .bar {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 1.5px;
-  border-radius: 1px; background: var(--ink); opacity: 0;
+  position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  border-radius: 1px; background: var(--accent); opacity: 0;
 }
 .nav a[aria-current="page"] .bar {
   opacity: 1;

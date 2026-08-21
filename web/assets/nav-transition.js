@@ -84,6 +84,14 @@
     if (location.search) history.replaceState({ sn: true }, "", target.pathname);
 
     const vt = document.startViewTransition(() => swap(data, target.pathname));
+    // 전환 객체는 ready·updateCallbackDone·finished 세 개의 promise 를 갖는다.
+    // 전환이 중간에 끊기면(메뉴 연타, 탭이 백그라운드로 내려가 렌더가 멈춤 등)
+    // 각각이 거부되는데, finished 만 받아두면 나머지가 '처리되지 않은 거부'로
+    // 새어 나가 사용자 콘솔에 InvalidStateError 가 찍힌다. 화면 동작에는 문제가
+    // 없지만 콘솔에 빨간 줄이 남는 것 자체가 신뢰를 깎는다. 전부 삼킨다.
+    const quiet = (p) => { if (p) p.catch(() => {}); };
+    quiet(vt.ready);
+    quiet(vt.updateCallbackDone);
     try { await vt.finished; } catch (_) {}
     window.scrollTo({ top: 0, behavior: "instant" });
   }
