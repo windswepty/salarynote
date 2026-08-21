@@ -94,14 +94,43 @@ input, select {
   border: 1px solid var(--line-2); border-radius: 6px;
   transition: border-color .12s, box-shadow .12s;
 }
+/* 컨트롤 높이를 하나로 고정한다.
+   브라우저가 날짜 입력에는 달력 아이콘, 셀렉트에는 화살표를 내부 요소로 넣어
+   같은 padding 을 줘도 2px 더 높게 렌더된다. 그대로 두면 한 행에
+   텍스트 입력과 날짜·셀렉트가 섞였을 때 바닥선이 어긋난다. */
+input, select { height: 43px; }
+/* 날짜 입력의 달력 아이콘이 고정 높이 안에서 세로 중앙에 오게 한다. */
+input[type="date"]::-webkit-calendar-picker-indicator { margin: 0; }
+
 input:hover, select:hover { border-color: var(--muted); }
 input:focus, select:focus {
   outline: none; border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-w);
 }
 #salary, #base { font-size: 19px; font-weight: 600; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
-.row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
-@media (max-width: 480px) { .row { grid-template-columns: 1fr; gap: 0; } }
+/* 한 행에 나란히 놓인 칸들의 입력창 바닥선을 맞춘다.
+   라벨 길이가 달라 한쪽만 두 줄로 접히면 입력창이 어긋나 보였다.
+   (예: '이직 전 1일 소정근로시간 (시간, 하한액이 여기에 비례합니다)' 옆의 '장애인 여부')
+
+   진짜 원인은 라벨이 아니라 `.field:last-child { margin-bottom: 0 }` 이었다.
+   그리드에서 '마지막 자식'은 오른쪽 칸이므로 왼쪽 칸에만 아래 여백이 남아
+   두 칸의 높이가 여백만큼 어긋났고, 그래서 stretch 도 소용이 없었다.
+   여백을 칸이 아니라 '행'이 갖게 해서 두 칸의 상자 높이를 같게 만든다. */
+.row {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: var(--s3); align-items: stretch;
+  margin-bottom: var(--s4);
+}
+.row:last-child { margin-bottom: 0; }
+.row .field { margin-bottom: 0; display: flex; flex-direction: column; }
+.row .field > label { flex: 1 0 auto; }         /* 라벨이 남는 높이를 흡수 */
+.row .field > input,
+.row .field > select { margin-top: auto; }      /* 입력창을 칸 바닥에 붙인다 */
+
+/* 좁은 화면에서는 세로로 쌓이므로 칸 사이 간격을 gap 이 맡는다. */
+@media (max-width: 480px) {
+  .row { grid-template-columns: 1fr; gap: var(--s4); }
+}
 
 /* ---------- 결과: 색 박스 없이 타이포로 ---------- */
 .result { text-align: left; padding: var(--s5) 0; }
