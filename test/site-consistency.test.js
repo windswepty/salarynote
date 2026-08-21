@@ -77,5 +77,59 @@ t("번들이 해석된 원장의 값을 담고 있다", () => {
   assert.ok(src.includes(`"lastVerified": "${rates.lastVerified}"`), "번들의 lastVerified 불일치");
 });
 
+/* ── 애드센스 ───────────────────────────────────────────────────
+   코드가 한 페이지라도 빠지면 광고가 덜 나오는 게 아니라 소유권 확인이
+   실패해 심사 자체가 막힌다. 페이지를 추가할 때 가장 잊기 쉬운 항목이라
+   빌드 검사를 테스트로 강제한다. */
+
+const ADS = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "adsense.json"), "utf8"));
+
+t("애드센스 코드가 모든 페이지에 심어져 있다", () => {
+  execFileSync(process.execPath, [path.join(ROOT, "build", "adsense.js"), "--check"],
+    { cwd: ROOT, stdio: "pipe" });
+});
+
+t("게시자 ID 가 원장 밖에 하드코딩돼 있지 않다", () => {
+  // HTML 과 ads.txt 는 생성물이라 당연히 들어 있다. 그 밖의 소스에 박혀 있으면
+  // ID 를 바꿀 때 한쪽만 바뀌어 조용히 어긋난다.
+  const LEDGER = path.join(ROOT, "data", "adsense.json");
+  const offenders = [];
+  const walk = (d) => {
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+      const f = path.join(d, e.name);
+      if (e.isDirectory()) walk(f);
+      else if (/\.(js|json)$/.test(e.name) && f !== LEDGER
+               && fs.readFileSync(f, "utf8").includes(ADS.publisherId))
+        offenders.push(path.relative(ROOT, f));
+    }
+  };
+  for (const dir of ["build", "src", "tools", "data"]) walk(path.join(ROOT, dir));
+  assert.strictEqual(offenders.length, 0, "ID 하드코딩: " + offenders.join(", "));
+});
+
+t("ads.txt 가 애드센스 형식을 지킨다", () => {
+  const txt = fs.readFileSync(path.join(WEB, "ads.txt"), "utf8");
+  assert.ok(/\n$/.test(txt), "마지막 줄바꿈이 없으면 마지막 줄이 무시될 수 있다");
+  const parts = txt.trim().split(/,\s*/);
+  assert.strictEqual(parts[0], "google.com");
+  assert.strictEqual(parts[1], ADS.publisherId, "ads.txt 의 게시자 ID 가 원장과 다르다");
+  assert.strictEqual(parts[2], "DIRECT");
+  assert.strictEqual(parts[3], "f08c47fec0942fa0", "구글 인증기관 ID 는 고정값이다");
+});
+
+t("오류 페이지에는 광고 코드를 넣지 않는다", () => {
+  // 애드센스 프로그램 정책상 오류 페이지 게재는 금지다.
+  const src = fs.readFileSync(path.join(WEB, "404.html"), "utf8");
+  assert.ok(!src.includes("adsbygoogle"), "404 페이지에 광고 코드가 있다");
+});
+
+t("개인정보처리방침이 광고 쿠키를 고지한다", () => {
+  // 제3자 광고 쿠키 고지는 애드센스 필수 요건이다. 없으면 반려된다.
+  const src = fs.readFileSync(path.join(WEB, "privacy", "index.html"), "utf8");
+  for (const need of ["쿠키", "AdSense", "제3자", "google.com/settings/ads"])
+    assert.ok(src.includes(need), `방침에 '${need}' 고지가 없다`);
+  assert.ok(!/광고를 게재하지 않으며/.test(src),
+    "광고를 도입했는데 '게재하지 않는다'는 옛 문장이 남아 있다");
+});
 console.log(`\n  ${pass} passed, ${fail} failed\n`);
 process.exit(fail === 0 ? 0 : 1);

@@ -1,0 +1,24 @@
+{
+  "$comment": "애드센스 게시자 정보. 이 파일이 유일한 출처이며, HTML 과 ads.txt 는 build/adsense.js 가 여기서 생성한다. 손으로 고치지 말 것.",
+
+  "publisherId": "pub-1635514565840145",
+  "$publisherIdNote": "페이지 소스에 공개되는 값이라 비밀이 아니다. 애드센스 > 계정 > 설정 > 계정 정보에서 확인할 수 있다.",
+
+  "scriptSrc": "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js",
+
+  "adsTxt": {
+    "domain": "google.com",
+    "relationship": "DIRECT",
+    "certificationAuthorityId": "f08c47fec0942fa0",
+    "$certNote": "구글의 고정 인증기관 ID 다. 게시자마다 다른 값이 아니라 모든 애드센스 게시자가 동일한 값을 쓴다.",
+    "$source": "https://support.google.com/adsense/answer/12171612"
+  },
+
+  "$excludedPages": {
+    "404.html": "오류 페이지에는 광고를 게재할 수 없다 (애드센스 프로그램 정책).",
+    "googlea268ee3a054d7a95.html": "서치콘솔 소유권 확인용 파일이라 head 자체가 없다."
+  },
+
+  "verifiedAt": "2026-08-22",
+  "$status": "검토 요청 전. 승인 결과는 애드센스 > 사이트 에서 확인한다."
+}
