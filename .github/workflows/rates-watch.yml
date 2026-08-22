@@ -68,6 +68,34 @@ jobs:
           echo "today=$(date -u -d '+9 hours' +%F)" >> "$GITHUB_OUTPUT"
           echo "대상 연도 $Y"
 
+      # ★라벨이 없으면 이슈 생성이 통째로 실패한다.★
+      # gh issue create 는 존재하지 않는 라벨을 만나면 이슈를 만들지 않고 죽는다.
+      # 실제로 그래서 "could not add label: 'rates-alert' not found" 로 경보가
+      # 발송되지 않았다. 문제를 알리는 장치가 문제 때문에 침묵한 셈이다.
+      # 라벨 생성은 멱등이므로 매 실행 앞에서 보장한다.
+      - name: 라벨 보장
+        run: |
+          set -e
+          ensure() {
+            gh label create "$1" --color "$2" --description "$3" --force >/dev/null
+            echo "  라벨 $1"
+          }
+          ensure rates-alert       "d73a4a" "요율 자동 갱신에 사람 개입이 필요함"
+          ensure rates-update      "0e8a16" "요율 원장 갱신 후보"
+          ensure tests-need-update "fbca04" "요율이 바뀌어 테스트 기대값도 고쳐야 함"
+
+      # ★도달성 진단을 먼저 한다.★
+      # 프리플라이트가 'fetch failed' 로 죽었을 때, 법제처만 막힌 것인지 한국
+      # 사이트가 전부 막힌 것인지 구분할 수 없었다. 그 구분에 따라 대응이 완전히
+      # 달라진다(출처 교체 vs 실행 위치 이전). 실패해도 job 을 멈추지 않고
+      # 판단 재료를 남긴다. 국내 PC 에서는 5개 출처 전부 HTTP 200 이 기준선이다.
+      - name: 출처 도달성 진단
+        if: always()
+        continue-on-error: true
+        run: |
+          node tools/reachability.js | tee "$RUNNER_TEMP/reach.md"
+          cat "$RUNNER_TEMP/reach.md" >> "$GITHUB_STEP_SUMMARY"
+
       # ★프리플라이트★ OC=test 가 막히면 1차 정본 출처가 통째로 죽는다.
       # 개인 OC 는 서버 IP 등록을 요구해 유동 IP 인 GitHub Actions 에서 대체가 안 된다.
       # 여기서 조용히 넘어가면 이후 전부 '파싱 실패' 로 보여 원인을 못 찾는다.
@@ -76,7 +104,12 @@ jobs:
           node -e "
             require('./tools/lib/law-go-kr.js').preflight()
               .then(r => console.log('OK OC=' + r.oc))
-              .catch(e => { console.error('::error::' + e.message); process.exit(1); });
+              .catch(e => {
+                console.error('::error::' + (e.message || e));
+                if (e.cause) console.error('원인: ' + (e.cause.code || e.cause.message));
+                console.error('위의 [출처 도달성 진단] 표를 보면 어디서 막혔는지 알 수 있습니다.');
+                process.exit(1);
+              });
           "
 
       - name: 출처 수집 (2개 이상 독립 출처)
@@ -286,19 +319,31 @@ jobs:
             [ -f "$RUNNER_TEMP/report.md" ] && cat "$RUNNER_TEMP/report.md"
             echo
             [ -f "$RUNNER_TEMP/stale.md" ] && { echo '---'; echo; cat "$RUNNER_TEMP/stale.md"; }
+            # 도달성 표가 없으면 'fetch failed' 만 보고 원인을 추측하게 된다.
+            [ -f "$RUNNER_TEMP/reach.md" ] && { echo; echo '---'; echo; cat "$RUNNER_TEMP/reach.md"; }
           } > "$BODY"
 
-          N=$(gh issue list --state open --label rates-alert --json number --jq '.[0].number // empty')
+          N=$(gh issue list --state open --label rates-alert --json number --jq '.[0].number // empty' || true)
           if [ -n "$N" ]; then
             gh issue comment "$N" --body-file "$BODY"
             echo "기존 이슈 #$N 에 코멘트했습니다(중복 방지)."
-          else
-            gh issue create \
-              --title "요율 자동 갱신 개입 필요 (${{ steps.cfg.outputs.today }})" \
-              --label rates-alert \
-              --assignee windswepty \
-              --body-file "$BODY"
+            exit 0
           fi
+
+          # ★알림은 어떤 이유로도 침묵하면 안 된다.★
+          # 라벨·담당자 지정이 실패해도 이슈 자체는 반드시 만든다. 라벨이 없어
+          # 이슈 생성이 통째로 죽은 적이 있다(rates-alert not found). 부가 정보를
+          # 붙이려다 본체를 잃는 것은 최악이다. 단계적으로 물러선다.
+          TITLE="요율 자동 갱신 개입 필요 (${{ steps.cfg.outputs.today }})"
+          gh issue create --title "$TITLE" --body-file "$BODY" \
+              --label rates-alert --assignee windswepty \
+          || gh issue create --title "$TITLE" --body-file "$BODY" --assignee windswepty \
+          || gh issue create --title "$TITLE" --body-file "$BODY" \
+          || {
+               echo "::error::이슈 생성에 실패했습니다. 아래 내용을 직접 확인하십시오."
+               cat "$BODY"
+               exit 1
+             }
 
       - name: 관측·리포트 보관
         if: always()
