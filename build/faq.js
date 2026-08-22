@@ -66,7 +66,12 @@ for (const file of walk(WEB)) {
 
   let next;
   if (src.includes(MARK_OPEN)) {
-    next = src.replace(new RegExp(MARK_OPEN + "[\s\S]*?" + MARK_CLOSE), block);
+    // ★백슬래시를 두 번 써야 한다.★ 일반 문자열에서 "[\s\S]" 는 \s 가 알려진
+    // 이스케이프가 아니라 그냥 s 로 죽어 [sS] 가 된다. 즉 s 와 S 글자만 매칭한다.
+    // 표식이 비어 있을 때는 0글자로 매칭돼 잘 동작하는 것처럼 보이지만, 한 번
+    // 내용이 채워지면 그 뒤로 영영 매칭되지 않는다. 그래서 FAQ 구조화 데이터가
+    // 첫 생성 이후 갱신되지 않고 옛 요율을 구글에 계속 노출하고 있었다.
+    next = src.replace(new RegExp(MARK_OPEN + "[\\s\\S]*?" + MARK_CLOSE), block);
   } else {
     next = src.replace("</head>", block + "\n</head>");
   }

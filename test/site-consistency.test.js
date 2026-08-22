@@ -164,5 +164,34 @@ t("개인정보처리방침이 광고 쿠키를 고지한다", () => {
   assert.ok(!/광고를 게재하지 않으며/.test(src),
     "광고를 도입했는데 '게재하지 않는다'는 옛 문장이 남아 있다");
 });
+t("★FAQ 구조화 데이터가 본문과 같은 숫자를 말한다★", () => {
+  // faq.js 의 치환 정규식이 한동안 [sS] 였다. 일반 문자열에서 "\s" 는 알려진
+  // 이스케이프가 아니라 그냥 s 로 죽기 때문이다. 표식이 비어 있을 때는 0글자로
+  // 매칭돼 잘 도는 것처럼 보이지만, 한 번 내용이 채워지면 그 뒤로 영영 다시
+  // 쓰이지 않는다. 그래서 본문 요율을 고쳐도 구조화 데이터만 옛 숫자로 남아
+  // 구글에는 틀린 값이 노출되고 있었다. 화면과 구조화 데이터를 대조한다.
+  const strip = (x) => x.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+  const offenders = [];
+
+  for (const f of htmls) {
+    const src = fs.readFileSync(f, "utf8");
+    const block = src.match(/<!--FAQ-->([\s\S]*?)<!--\/FAQ-->/);
+    if (!block || !block[1].trim()) continue;
+
+    const json = block[1].match(/<script[^>]*>([\s\S]*?)<\/script>/);
+    if (!json) continue;
+
+    // 본문(main)만 본다. head 의 구조화 데이터끼리 비교하면 의미가 없다.
+    const body = strip(src.split("<main")[1] || "");
+    for (const item of JSON.parse(json[1]).mainEntity) {
+      for (const p of item.acceptedAnswer.text.match(/[\d.]+%/g) || [])
+        if (!body.includes(p))
+          offenders.push(`${path.relative(WEB, f)}: 구조화 데이터의 ${p} 가 본문에 없다`);
+    }
+  }
+  assert.strictEqual(offenders.length, 0,
+    "구조화 데이터가 본문과 어긋남:\n        " + offenders.join("\n        "));
+});
+
 console.log(`\n  ${pass} passed, ${fail} failed\n`);
 process.exit(fail === 0 ? 0 : 1);

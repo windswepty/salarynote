@@ -103,25 +103,55 @@ jobs:
           echo "changed=$(git diff --quiet -- data/ && echo no || echo yes)" >> "$GITHUB_OUTPUT"
           echo "종료 코드 $code"
 
-      # ★테스트가 통과할 때만 진행한다.★
-      # 예약 job 안에서 전부 돌리므로, GITHUB_TOKEN PR 의 '승인 대기' 제약이 무의미해진다.
-      # 실패하면 PR 이 아예 안 생기고 이슈만 뜬다 — '멈추는 것이 낫다' 원칙 그대로.
-      - name: 번들 재생성 + 전체 테스트
+      # ★원장에서 파생되는 것을 전부 다시 만든다.★
+      # 예전에는 bundle.js 만 돌렸다. 그래서 원장이 실제로 갱신되는 날
+      # engine.js 만 새 요율이 되고 화면 표식·푸터·실수령액표·요율표는 옛 숫자로
+      # 남아 테스트가 무너졌고, 워크플로는 원장 변경을 되돌렸다. 자동 갱신이
+      # 작동할 수 없는 상태였다. 목록은 build/all.js 한 곳에만 둔다.
+      - name: 파생물 재생성
+        if: steps.update.outputs.code == '0'
+        run: node build/all.js
+
+      # ★테스트가 깨져도 되돌리지 않는다.★
+      # 엔진 테스트는 금액을 못 박아 둔다(3,000,000 × 0.9% = 27,000). 요율이 진짜
+      # 바뀌면 이 값들은 실패하는 것이 정상이고, 바로 그 지점이 사람이 새 요율을
+      # 눈으로 확인해야 하는 자리다. 여기서 되돌려 버리면 정작 사람이 봐야 할
+      # 물건(새 요율이 담긴 PR)이 사라지고 '테스트 실패' 라는 말만 남는다.
+      # 결과를 기록해 PR 본문 맨 위에 싣고, 자동 병합은 어차피 하지 않는다.
+      - name: 전체 테스트
+        id: tests
         if: steps.update.outputs.code == '0'
         run: |
-          set -e
-          node build/bundle.js
-          fail=0
+          set +e
+          : > "$RUNNER_TEMP/tests.md"
+          bad=""
           for f in test/*.test.js; do
             echo "::group::$f"
-            node "$f" || fail=1
+            out=$(node "$f" 2>&1)
+            code=$?
+            echo "$out"
             echo "::endgroup::"
+            if [ "$code" != "0" ]; then
+              bad="$bad $(basename "$f")"
+              {
+                echo "<details><summary><code>$(basename "$f")</code> 실패</summary>"
+                echo
+                echo '```'
+                echo "$out" | grep -A3 FAIL | head -40
+                echo '```'
+                echo "</details>"
+                echo
+              } >> "$RUNNER_TEMP/tests.md"
+            fi
           done
-          if [ "$fail" != "0" ]; then
-            echo "::error::테스트 실패. 원장 변경을 되돌립니다."
-            git checkout -- data/ web/assets/engine.js
-            exit 1
+          if [ -n "$bad" ]; then
+            echo "failed=yes" >> "$GITHUB_OUTPUT"
+            echo "list=$bad" >> "$GITHUB_OUTPUT"
+            echo "::warning::테스트 실패:$bad — 요율이 바뀌면 금액을 못 박은 테스트는 실패하는 것이 정상입니다. PR 에서 확인하십시오."
+          else
+            echo "failed=no" >> "$GITHUB_OUTPUT"
           fi
+          exit 0
 
       # 값이 실제로 바뀐 경우에만 PR. main 병합 = Cloudflare Pages 즉시 배포이므로
       # 자동 병합은 하지 않는다. 사람 검토 1회를 반드시 거친다.
@@ -144,13 +174,43 @@ jobs:
           git config user.name  "salarynote-rates-bot"
           git config user.email "windswept1325@gmail.com"
           git checkout -b "$BR"
-          git add data/ web/assets/engine.js
+          # 원장뿐 아니라 파생물(화면 표식·표·번들·sitemap)까지 함께 담아야
+          # PR 하나로 배포 가능한 상태가 된다.
+          git add -A data/ web/
           git commit -m "[자동] ${{ steps.cfg.outputs.year }}년 요율 원장 갱신 후보 (${N}건)"
           git push -u origin "$BR"
+
+          # 테스트 결과를 본문 맨 위에 둔다. 사람이 제일 먼저 봐야 할 정보다.
+          BODY="$RUNNER_TEMP/pr.md"
+          if [ "${{ steps.tests.outputs.failed }}" = "yes" ]; then
+            {
+              echo "## ⚠️ 병합하기 전에 확인이 필요합니다"
+              echo
+              echo "테스트가 실패했습니다:${{ steps.tests.outputs.list }}"
+              echo
+              echo "요율이 실제로 바뀌면 금액을 못 박아 둔 테스트는 **실패하는 것이 정상**입니다."
+              echo "새 요율이 맞는지 아래 근거를 확인하고, 맞다면 테스트의 기대값도 함께 고쳐야 합니다."
+              echo
+              cat "$RUNNER_TEMP/tests.md"
+              echo "---"
+              echo
+            } > "$BODY"
+          else
+            {
+              echo "## ✅ 전체 테스트 통과"
+              echo
+              echo "그래도 자동 병합하지 않습니다. 근거를 확인한 뒤 병합하십시오."
+              echo
+            } > "$BODY"
+          fi
+          cat "$RUNNER_TEMP/report.md" >> "$BODY"
+
+          LABELS="rates-update"
+          [ "${{ steps.tests.outputs.failed }}" = "yes" ] && LABELS="rates-update,tests-need-update"
           gh pr create \
             --title "[자동] ${{ steps.cfg.outputs.year }}년 요율 원장 갱신 (${N}건)" \
-            --body-file "$RUNNER_TEMP/report.md" \
-            --label rates-update \
+            --body-file "$BODY" \
+            --label "$LABELS" \
             --assignee windswepty \
             --base main --head "$BR"
           echo "created=yes" >> "$GITHUB_OUTPUT"
@@ -175,10 +235,10 @@ jobs:
             git checkout -- data/ web/assets/engine.js || true
             exit 0
           fi
-          node build/bundle.js
+          node build/all.js
           git config user.name  "salarynote-rates-bot"
           git config user.email "windswept1325@gmail.com"
-          git add data/ web/assets/engine.js
+          git add -A data/ web/
           git diff --cached --quiet && { echo "변경 없음"; exit 0; }
           git commit -m "[자동] 요율 확인 기록 갱신 (lastVerified=${{ steps.cfg.outputs.today }}, 숫자 변경 없음)"
           git push origin HEAD:main
