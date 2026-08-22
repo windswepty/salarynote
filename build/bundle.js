@@ -32,8 +32,13 @@ const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8").split(CR).join("
  * 1월 1일에 번들이 안 만들어지는 편이 옛 요율을 배포하는 것보다 낫다
  * (engine.js 는 이미 커밋돼 있어 사이트는 계속 뜬다).
  */
-const { resolve, assertYearMatchesContent } = require("../tools/lib/resolve-ledger.js");
-const LEDGER = resolve();
+const { resolve, assertCurrent, assertYearMatchesContent } = require("../tools/lib/resolve-ledger.js");
+// ★해가 바뀌었는데 새 원장이 없으면 여기서 멈춘다.★
+// resolve-ledger.js 는 이 검사를 '번들 게이트의 존재 이유' 라고 적어 두었는데
+// 정작 아무 데서도 부르지 않아 죽은 코드였다. 그래서 2027-01-01 에 2026 원장으로
+// 조용히 번들이 만들어지는 상태였다(시뮬레이션으로 재현 확인).
+// 작년 요율을 새해에 배포하는 것보다 빌드를 멈추는 쪽이 낫다.
+const LEDGER = assertCurrent(resolve());
 const readAbs = (abs) => fs.readFileSync(abs, "utf8").split(CR).join("");
 const rates = readAbs(LEDGER.ledgerPath);
 // 육아휴직 급여 원장. 연도별 파일이 아니라 제도 단위 파일이라 경로가 고정이다.

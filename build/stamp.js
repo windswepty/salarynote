@@ -16,13 +16,13 @@
  */
 const fs = require("fs");
 const path = require("path");
-const { resolve, assertYearMatchesContent } = require("../tools/lib/resolve-ledger.js");
+const { resolve, assertCurrent, assertYearMatchesContent } = require("../tools/lib/resolve-ledger.js");
 
 const ROOT = path.join(__dirname, "..");
 const WEB = path.join(ROOT, "web");
 const CHECK = process.argv.includes("--check");
 
-const LEDGER = resolve();
+const LEDGER = assertCurrent(resolve());   // 새해에 작년 요율을 화면에 찍지 않는다
 const rates = JSON.parse(fs.readFileSync(LEDGER.ledgerPath, "utf8"));
 assertYearMatchesContent(LEDGER, rates);
 
