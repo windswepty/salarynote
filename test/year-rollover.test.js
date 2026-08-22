@@ -86,17 +86,69 @@ t("assertCurrent 가 실제로 build 코드에 연결돼 있다", () => {
   }
 });
 
-t("원장 연도가 미래여도 멈춘다", () => {
-  // 파일명을 잘못 붙이거나 시스템 시각이 어긋난 경우.
+t("올해 원장이 하나도 없으면 멈춘다", () => {
+  // 시스템 시각이 과거로 돌아갔거나 파일명을 잘못 붙인 경우.
+  // 이때는 있는 원장이 전부 미래이므로 현역이 없다.
   const r = runAt(`${L.year - 1}-06-01`, "build/bundle.js");
-  assert.notStrictEqual(r.code, 0, "미래 원장을 그대로 썼다");
-  assert.ok(/미래입니다/.test(r.err), `기대한 오류가 아니다:\n${r.err.slice(0, 300)}`);
+  assert.notStrictEqual(r.code, 0, "현역이 아닌 원장을 그대로 썼다");
+  assert.ok(/현역 원장이 없습니다/.test(r.err), `기대한 오류가 아니다:\n${r.err.slice(0, 300)}`);
 });
 
 t("assertCurrent 자체의 판정이 정확하다", () => {
   assert.doesNotThrow(() => assertCurrent(L, `${L.year}-12-31`), "같은 해 마지막 날");
   assert.throws(() => assertCurrent(L, `${L.year + 1}-01-01`), /현역 원장이 없습니다/, "다음 해 첫날");
-  assert.throws(() => assertCurrent(L, `${L.year - 1}-12-31`), /미래입니다/, "이전 해");
+  assert.throws(() => assertCurrent(L, `${L.year - 1}-12-31`), /현역 원장이 없습니다/, "이전 해");
+});
+
+/* ── 다음 해 원장을 미리 준비할 수 있는가 ─────────────────────
+   무인 연도 전환의 핵심이다. 예전에는 resolve() 가 무조건 최신 연도를 골라서,
+   12월에 rates-2027.json 을 넣는 순간 빌드가 '원장이 미래입니다' 로 죽었다.
+   그래서 다음 해 요율이 이미 고시돼 있어도 준비를 미뤄야 했고, 1월 1일이
+   지나서야 사람이 손으로 만들 수 있었다. 이제는 미리 넣어 두면 그 해가 올 때
+   저절로 현역이 된다. 진짜 데이터를 건드리지 않도록 임시 디렉터리에서 검사한다. */
+
+const os = require("os");
+
+/** 주어진 연도들의 빈 원장 파일만 있는 임시 저장소를 만든다. */
+function fakeRoot(years) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "sn-ledger-"));
+  fs.mkdirSync(path.join(root, "data"));
+  for (const y of years) {
+    fs.writeFileSync(path.join(root, "data", `rates-${y}.json`),
+      JSON.stringify({ year: y }), "utf8");
+  }
+  return root;
+}
+
+t("★다음 해 원장을 미리 넣어도 올해 값을 쓴다★", () => {
+  const root = fakeRoot([2026, 2027]);
+  const r = resolve({ root, today: "2026-12-15" });
+  assert.strictEqual(r.year, 2026,
+    "12월에 내년 원장을 준비해 뒀는데 사이트가 벌써 내년 값을 쓴다");
+  assert.doesNotThrow(() => assertCurrent(r, "2026-12-15"), "준비만 했는데 빌드가 막혔다");
+});
+
+t("★해가 바뀌면 아무도 손대지 않아도 전환된다★", () => {
+  const root = fakeRoot([2026, 2027]);
+  const r = resolve({ root, today: "2027-01-01" });
+  assert.strictEqual(r.year, 2027, "새해가 됐는데 작년 원장을 쓴다");
+  assert.doesNotThrow(() => assertCurrent(r, "2027-01-01"));
+});
+
+t("준비를 안 했으면 새해에 멈춘다", () => {
+  const root = fakeRoot([2026]);
+  const r = resolve({ root, today: "2027-01-01" });
+  assert.strictEqual(r.year, 2026);
+  assert.throws(() => assertCurrent(r, "2027-01-01"), /현역 원장이 없습니다/);
+});
+
+t("파일 이름 오탈자는 여전히 잡는다", () => {
+  // '오늘 이하 중 최신' 규칙 때문에 미래 파일이 그냥 무시되면 오탈자가 묻힌다.
+  // 다음 해까지는 정상적인 사전 준비, 그 너머는 실수로 본다.
+  assert.throws(() => resolve({ root: fakeRoot([2026, 3026]), today: "2026-08-22" }),
+    /너무 먼 미래/, "rates-3026.json 을 조용히 무시했다");
+  assert.doesNotThrow(() => resolve({ root: fakeRoot([2026, 2027]), today: "2026-08-22" }),
+    "내년 준비를 오탈자로 오인했다");
 });
 
 console.log(`\n  ${pass} passed, ${fail} failed\n`);
