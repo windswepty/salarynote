@@ -36,10 +36,10 @@ function parsed() {
   const rows = [];
   for (const line of body.split("\n")) {
     const m = line.match(
-      /href="\/\?v=(\d+)[^"]*">([^<]+)<\/a><\/th><td class="num"><b>([\d,]+)<\/b><\/td><td class="num">([\d,]+)<\/td><td class="num">([\d.]+)%<\/td>/);
+      /href="\/\?v=(\d+)[^"]*">([^<]+)<\/a><\/th><td class="num">([\d,]+)<\/td><td class="num"><b>([\d,]+)<\/b><\/td><td class="num drop">([\d,]+)<\/td><td class="num">([\d.]+)%<\/td>/);
     if (m) rows.push({
       annual: Number(m[1]), label: m[2],
-      net: num(m[3]), deduction: num(m[4]), rate: Number(m[5]),
+      gross: num(m[3]), net: num(m[4]), deduction: num(m[5]), rate: Number(m[6]),
     });
   }
   return rows;
@@ -89,17 +89,23 @@ t("★모든 행이 엔진 결과와 한 원도 다르지 않다★", () => {
   assert.strictEqual(bad.length, 0, bad.slice(0, 5).join("\n        "));
 });
 
-t("실수령액 + 공제액 = 월 총지급액", () => {
+t("실수령액 + 공제액 = 월 세전", () => {
+  for (const r of rows)
+    assert.strictEqual(r.net + r.deduction, r.gross,
+      `연봉 ${r.annual}: ${r.net} + ${r.deduction} ≠ ${r.gross}`);
+});
+
+t("월 세전 열이 연봉을 12로 나눈 값이다", () => {
+  // '월급 400 실수령액' 검색이 이 열을 보고 들어온다. 어긋나면 안 된다.
   for (const r of rows) {
-    const gross = Math.round(r.annual / 12);
-    assert.ok(Math.abs(r.net + r.deduction - gross) <= 1,
-      `연봉 ${r.annual}: ${r.net} + ${r.deduction} ≠ ${gross}`);
+    const e = calcNetPay({ annualSalary: r.annual, ...ASSUMED, payDate }, rates, taxTable);
+    assert.strictEqual(r.gross, e.gross, `연봉 ${r.annual} 월 세전`);
   }
 });
 
 t("실수령률 표기가 실제 비율과 맞는다", () => {
   for (const r of rows) {
-    const want = (r.net / (r.annual / 12)) * 100;
+    const want = (r.net / r.gross) * 100;
     assert.ok(Math.abs(want - r.rate) < 0.06,
       `연봉 ${r.annual}: 표 ${r.rate}% ≠ 실제 ${want.toFixed(2)}%`);
   }

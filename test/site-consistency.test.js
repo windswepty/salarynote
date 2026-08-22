@@ -59,9 +59,12 @@ t("원장 밖에 살아있는 요율 숫자가 하드코딩돼 있지 않다", (
   const offenders = [];
   for (const f of htmls) {
     let s = fs.readFileSync(f, "utf8");
-    // 표식 안쪽과 생성된 푸터는 정당하다
+    // 표식 안쪽과 빌드가 생성한 블록은 정당하다.
+    // <!--RATES--> <!--TABLE--> 처럼 짝을 이루는 주석 사이는 전부 생성물이라
+    // 원장에서 나온 값일 수밖에 없다. 손으로 쓴 산문만 검사 대상이다.
     s = s.replace(/<span data-rate="[^"]+"[^>]*>[\s\S]*?<\/span>/g, "")
-         .replace(/<!--STAMP:footer-->[\s\S]*?<!--\/STAMP-->/g, "");
+         .replace(/<!--STAMP:footer-->[\s\S]*?<!--\/STAMP-->/g, "")
+         .replace(/<!--([A-Z]+)-->[\s\S]*?<!--\/\1-->/g, "");
     for (const [str, label] of live) {
       // 부분 문자열로 찾으면 안 된다. 실수령액표의 '89.5%' 안에 국민연금 '9.5%' 가,
       // '81.8%' 안에 고용보험 '1.8%' 가 들어 있어 멀쩡한 페이지가 걸린다.

@@ -17,6 +17,7 @@ module.exports = [
   { url: "/parental-leave/",  nav: "육아휴직",  title: "육아휴직 급여", priority: "0.9", changefreq: "monthly" },
   { url: "/unemployment/",    nav: "실업급여", title: "실업급여",        priority: "0.9", changefreq: "monthly" },
   { url: "/salary-table/",   nav: "실수령액표", title: "연봉 실수령액표", priority: "0.9", changefreq: "monthly" },
+  { url: "/insurance-rates/", nav: "요율표", title: "4대보험 요율표", priority: "0.9", changefreq: "monthly" },
   { url: "/about/",           nav: null,       title: "소개", priority: "0.4", changefreq: "yearly" },
   { url: "/privacy/",        nav: null,      title: "개인정보처리방침", priority: "0.2", changefreq: "yearly" },
 ];

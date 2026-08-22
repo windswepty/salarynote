@@ -75,11 +75,14 @@ function rows() {
 }
 
 function tableHtml(list) {
+  // '월 세전' 열은 '월급 400 실수령액' 같은 검색을 이 페이지가 받게 하려는 것이다.
+  // 월급표를 따로 만들면 같은 값을 라벨만 바꿔 두 번 싣는 셈이라 중복으로 취급된다.
   const head =
     "  <thead><tr>" +
     "<th scope=\"col\">연봉</th>" +
+    "<th scope=\"col\" class=\"num\">월 세전</th>" +
     "<th scope=\"col\" class=\"num\">월 실수령액</th>" +
-    "<th scope=\"col\" class=\"num\">월 공제액</th>" +
+    "<th scope=\"col\" class=\"num drop\">월 공제액</th>" +
     "<th scope=\"col\" class=\"num\">실수령률</th>" +
     "</tr></thead>";
 
@@ -91,8 +94,9 @@ function tableHtml(list) {
     // HTML 속성 안에서는 & 를 이스케이프해야 유효한 문서가 된다.
     const q = `v=${r.annual}&amp;dep=${DEPENDENTS}&amp;nt=${NON_TAXABLE}`;
     return `    <tr><th scope="row"><a href="/?${q}">${label}</a></th>` +
+      `<td class="num">${won(r.gross)}</td>` +
       `<td class="num"><b>${won(r.net)}</b></td>` +
-      `<td class="num">${won(r.deduction)}</td>` +
+      `<td class="num drop">${won(r.deduction)}</td>` +
       `<td class="num">${r.rate.toFixed(1)}%</td></tr>`;
   }).join("\n");
 
