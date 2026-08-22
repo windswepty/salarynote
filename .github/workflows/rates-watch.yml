@@ -141,6 +141,20 @@ jobs:
               });
           "
 
+      # ★간이세액표 646행을 원문과 대조한다.★
+      # 이 표에서 소득세 전부가 나오는데, 지금까지는 사람이 한 번 만들고 끝이라
+      # 매년 2월말 개정을 놓치면 조용히 틀린 세금을 계산하게 된다.
+      # 값이 다르면 실패시키지 않고 기록만 한다 — 개정은 정상적인 사건이고,
+      # 새 표를 원장에 반영하는 것은 사람이 판단할 일이다. 다만 놓치지는 않는다.
+      - name: 간이세액표 원문 대조
+        id: taxtable
+        if: steps.reach.outputs.blocked != 'yes'
+        continue-on-error: true
+        run: |
+          set +e
+          node tools/parse-tax-table.js --fetch --check 2>&1 | tee "$RUNNER_TEMP/taxtable.md"
+          echo "code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
       - name: 출처 수집 (2개 이상 독립 출처)
         if: steps.reach.outputs.blocked != 'yes'
         run: |
@@ -342,7 +356,8 @@ jobs:
         if: |
           always()
           && steps.reach.outputs.blocked != 'yes'
-          && (failure() || steps.update.outputs.code != '0' || steps.stale.outputs.code == '2')
+          && (failure() || steps.update.outputs.code != '0' || steps.stale.outputs.code == '2'
+              || steps.taxtable.outputs.code != '0')
         run: |
           set -e
           URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
@@ -358,6 +373,7 @@ jobs:
             echo
             [ -f "$RUNNER_TEMP/stale.md" ] && { echo '---'; echo; cat "$RUNNER_TEMP/stale.md"; }
             # 도달성 표가 없으면 'fetch failed' 만 보고 원인을 추측하게 된다.
+            [ -f "$RUNNER_TEMP/taxtable.md" ] && { echo; echo '---'; echo; echo '### 간이세액표 원문 대조'; echo; echo '```'; cat "$RUNNER_TEMP/taxtable.md"; echo '```'; }
             [ -f "$RUNNER_TEMP/reach.md" ] && { echo; echo '---'; echo; cat "$RUNNER_TEMP/reach.md"; }
           } > "$BODY"
 
