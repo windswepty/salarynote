@@ -42,7 +42,10 @@
       main: doc.querySelector("main"),
       mode: readMode(doc),
     };
-    if (!data.main || !data.ptitle || !data.mode) throw new Error("페이지 구조가 예상과 다릅니다");
+    // mode 는 없어도 된다. 실수령액표처럼 계산기가 없는 페이지는 내용이 이미
+    // 정적 HTML 이라 갈아끼우기만 하면 끝이다. 예전에는 mode 를 필수로 봐서
+    // 그런 페이지로 갈 때마다 전환이 실패하고 전체 새로고침으로 떨어졌다.
+    if (!data.main || !data.ptitle) throw new Error("페이지 구조가 예상과 다릅니다");
     cache.set(url, data);
     return data;
   }
@@ -65,7 +68,7 @@
 
     // 밑줄이 '이동'하려면 스냅샷을 찍기 전에 활성 표시가 새 위치로 옮겨져 있어야 한다.
     syncNav(pathname);
-    window.SN_PAGE({ mode: data.mode });
+    if (data.mode) window.SN_PAGE({ mode: data.mode });
   }
 
   async function go(url, { push }) {

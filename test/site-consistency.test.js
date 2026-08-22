@@ -62,8 +62,13 @@ t("원장 밖에 살아있는 요율 숫자가 하드코딩돼 있지 않다", (
     // 표식 안쪽과 생성된 푸터는 정당하다
     s = s.replace(/<span data-rate="[^"]+"[^>]*>[\s\S]*?<\/span>/g, "")
          .replace(/<!--STAMP:footer-->[\s\S]*?<!--\/STAMP-->/g, "");
-    for (const [str, label] of live)
-      if (s.includes(str)) offenders.push(`${path.relative(WEB, f)}: ${label} ${str}`);
+    for (const [str, label] of live) {
+      // 부분 문자열로 찾으면 안 된다. 실수령액표의 '89.5%' 안에 국민연금 '9.5%' 가,
+      // '81.8%' 안에 고용보험 '1.8%' 가 들어 있어 멀쩡한 페이지가 걸린다.
+      // 숫자 앞에 다른 숫자나 소수점이 붙어 있으면 다른 값이다.
+      const re = new RegExp("(?<![\\d.])" + str.replace(/\./g, "\\."));
+      if (re.test(s)) offenders.push(`${path.relative(WEB, f)}: ${label} ${str}`);
+    }
   }
   assert.strictEqual(offenders.length, 0, "표식 밖 하드코딩:\n        " + offenders.join("\n        "));
 });
