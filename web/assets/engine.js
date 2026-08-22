@@ -2520,6 +2520,15 @@ module.exports = { calcUnemploymentBenefit, benefitDaysTable, resolveCohort };
     "source": "https://www.comwel.or.kr/comwel/paym/paym/tari.jsp"
   },
 
+  "nonTaxable": {
+    "label": "비과세 한도",
+    "$comment": "계산기 기본값이 이 값을 따른다. 원장 밖에 두면 한도가 바뀌어도 계산기 기본값만 옛 금액으로 남아 조용히 다른 답을 보여준다(2023년에 10만원에서 20만원으로 오른 전례가 있다).",
+    "mealAllowanceMonthlyCap": 200000,
+    "effectiveFrom": "2023-01-01",
+    "note": "식대(월정액 급식비) 비과세 한도. 2023년 1월 1일부터 월 20만원. 현물 급식을 제공받으면 적용되지 않는다.",
+    "source": "https://www.law.go.kr/법령/소득세법시행령/제17조의2",
+    "lawRef": "소득세법 제12조제3호거목, 같은 법 시행령 제17조의2"
+  },
   "minimumWage": {
     "label": "최저임금",
     "hourly": 10320,

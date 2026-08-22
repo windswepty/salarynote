@@ -193,5 +193,54 @@ t("★FAQ 구조화 데이터가 본문과 같은 숫자를 말한다★", () =>
     "구조화 데이터가 본문과 어긋남:\n        " + offenders.join("\n        "));
 });
 
+t("★입력칸 속성에 연도가 박혀 있지 않다★", () => {
+  // 실업급여 페이지에 max="2026-12-31" 이 손으로 적혀 있었다. 2027-01-01 이
+  // 되면 그 달력은 작년까지만 고를 수 있고, 사용자는 이유를 모른 채 계산을
+  // 못 한다. 본문 숫자만 원장과 맞추고 입력칸 속성은 감시망 밖에 두었던 탓이다.
+  const offenders = [];
+  for (const f of htmls) {
+    const src = fs.readFileSync(f, "utf8");
+    for (const m of src.matchAll(/<(?:input|select)\s[^>]*>/g)) {
+      const tag = m[0];
+      if (!/(?:min|max|value)="[^"]*\d{4}-\d{2}-\d{2}"/.test(tag)) continue;
+      if (/data-stamp=/.test(tag)) continue;   // 원장에서 찍히면 정당하다
+      offenders.push(`${path.relative(WEB, f)}: ${tag.slice(0, 110)}`);
+    }
+  }
+  assert.strictEqual(offenders.length, 0,
+    "날짜가 손으로 박힌 입력칸:\n        " + offenders.join("\n        "));
+});
+
+t("★계산기 기본값이 원장 밖에서 오지 않는다★", () => {
+  // 식대 비과세 20만원이 세 페이지에 손으로 적혀 있었고 원장에는 아예 없었다.
+  // 한도가 바뀌면(2023년에 10만→20만 인상 전례) 계산기 기본값만 옛 금액으로
+  // 남아 조용히 다른 답을 보여준다.
+  const cap = rates.nonTaxable.mealAllowanceMonthlyCap;
+  const asText = cap.toLocaleString("ko-KR");
+  const offenders = [];
+  for (const f of htmls) {
+    const src = fs.readFileSync(f, "utf8");
+    for (const m of src.matchAll(/<input\s[^>]*>/g)) {
+      const tag = m[0];
+      if (!new RegExp(`value="${asText.replace(/,/g, ",")}"`).test(tag)) continue;
+      if (/data-stamp=/.test(tag)) continue;
+      offenders.push(`${path.relative(WEB, f)}: ${tag.slice(0, 110)}`);
+    }
+  }
+  assert.strictEqual(offenders.length, 0,
+    `비과세 한도(${asText})가 원장 없이 박힌 입력칸:\n        ` + offenders.join("\n        "));
+});
+
+t("실업급여 날짜 상한이 원장 코호트와 일치한다", () => {
+  const u = JSON.parse(fs.readFileSync(
+    path.join(ROOT, "data", `unemployment-${L.year}.json`), "utf8"));
+  const wantMax = u.cohorts.map((c) => c.leaveDateTo).sort().pop();
+  const src = fs.readFileSync(path.join(WEB, "unemployment", "index.html"), "utf8");
+  const m = src.match(/id="uiLeave"[^>]*max="([^"]+)"/);
+  assert.ok(m, "이직일 입력의 max 를 찾지 못했다");
+  assert.strictEqual(m[1], wantMax,
+    "달력 상한이 원장의 마지막 코호트 종료일과 다르다");
+});
+
 console.log(`\n  ${pass} passed, ${fail} failed\n`);
 process.exit(fail === 0 ? 0 : 1);
