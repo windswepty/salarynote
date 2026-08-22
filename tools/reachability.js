@@ -103,9 +103,9 @@ const mark = (r) => (r.ok ? "OK" : "실패");
   const rows = [];
   for (const [host, label] of HOSTS) {
     const d = await resolve(host);
-    const t = d.ok ? await connect(host) : { ok: false, err: "DNS 실패" };
-    const s = t.ok ? await handshake(host) : { ok: false, err: "-" };
-    const h = s.ok ? await http(host) : { ok: false, err: "-" };
+    const t = d.ok ? await connect(host) : { ok: false, err: "DNS 실패", ms: 0 };
+    const s = t.ok ? await handshake(host) : { ok: false, err: "앞 단계 실패", ms: 0 };
+    const h = s.ok ? await http(host) : { ok: false, err: "앞 단계 실패", ms: 0 };
     rows.push({ host, label, d, t, s, h });
 
     const cell = (r) => {
@@ -148,4 +148,17 @@ const mark = (r) => (r.ok ? "OK" : "실패");
     console.log("  차단은 아니지만 지연이 커지면 간헐적으로 끊깁니다. " +
       "tools/lib/net.js 의 HOST_MIN_TIMEOUT_MS 로 하한을 두고 있습니다.");
   }
+
+  /* ★워크플로가 읽는 기계용 출력.★
+     한국 출처가 막힌 것은 우리 코드의 결함이 아니라 그 순간 러너 IP 의 문제다.
+     3시간마다 도는 워크플로가 그때마다 이슈를 만들면 하루 몇 건씩 쌓여 진짜
+     경보가 묻힌다. 이 값을 보고 '조용히 넘기고 다음 실행에 맡길지' 를 정한다.
+     지속적인 실패는 healthchecks.io 가 이틀 침묵으로 잡는다. */
+  const blockedHosts = korean.filter((r) => !r.h.ok).map((r) => r.host);
+  if (process.env.GITHUB_OUTPUT) {
+    require("fs").appendFileSync(process.env.GITHUB_OUTPUT,
+      `blocked=${blockedHosts.length ? "yes" : "no"}\n` +
+      `blocked_hosts=${blockedHosts.join(",")}\n`);
+  }
+  console.log(`\n<!-- BLOCKED=${blockedHosts.join(",") || "none"} -->`);
 })();

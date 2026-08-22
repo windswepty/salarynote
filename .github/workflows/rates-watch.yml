@@ -8,8 +8,15 @@ name: rates-watch
 #   위험 때문에 '1년에 한 번뿐인 기회' 를 통째로 날린다. 매일 전 출처를 점검한다.
 #   비용은 월 2,000분 중 5% 미만이다.
 #
+# ★3시간마다 도는 이유는 한국 정부망이 간헐적으로 막히기 때문이다.★
+#   실측: www.law.go.kr·www.minimumwage.go.kr 은 27.101.x 대역인데 러너 IP 에
+#   따라 TCP SYN 이 통째로 무응답이 된다(#5). 같은 워크플로가 30분 전에는
+#   384ms 로 붙었다(#4). 우리 코드 문제가 아니라 그 순간 러너 IP 의 문제다.
+#   막힌 러너에서 재시도해 봐야 같은 IP 라 소용없으므로, 짧게 포기하고 다음
+#   실행에 맡긴다. 실패율이 절반이어도 하루 8번이면 전부 실패할 확률은 0.4% 다.
+#   비용은 월 2,000분 중 약 36%.
+#
 # ★cron 은 UTC 다.★ KST = UTC+9 (한국은 1988년 이후 서머타임 없음).
-#   UTC 03:40 = KST 12:40 — PR 이 한국 근무시간에 떠서 당일 안에 사람이 본다.
 #   정각(분 00)과 :30 은 고부하 시간대라 피한다.
 #   on.schedule 의 timezone: 키는 비교적 최근 기능이라 쓰지 않았다. Asia/Seoul 은
 #   DST 가 없어 UTC 산술과 실행 시각이 완전히 동일하다.
@@ -19,7 +26,7 @@ name: rates-watch
 
 on:
   schedule:
-    - cron: '40 3 * * *'
+    - cron: '40 */3 * * *'
   workflow_dispatch:
     inputs:
       year:
@@ -90,16 +97,38 @@ jobs:
       # 달라진다(출처 교체 vs 실행 위치 이전). 실패해도 job 을 멈추지 않고
       # 판단 재료를 남긴다. 국내 PC 에서는 5개 출처 전부 HTTP 200 이 기준선이다.
       - name: 출처 도달성 진단
+        id: reach
         if: always()
         continue-on-error: true
         run: |
           node tools/reachability.js | tee "$RUNNER_TEMP/reach.md"
           cat "$RUNNER_TEMP/reach.md" >> "$GITHUB_STEP_SUMMARY"
 
+      # ★막혔으면 조용히 끝낸다.★
+      # 3시간마다 도는데 막힐 때마다 실패로 처리하면 실패 알림과 이슈가 하루
+      # 몇 건씩 쌓이고, 그 소음 속에서 진짜 경보를 놓친다. 이것은 우리 쪽 결함이
+      # 아니라 그 순간 러너 IP 의 문제이고, 다음 실행이 다른 IP 로 재시도한다.
+      # 지속적인 실패는 healthchecks.io 가 잡는다 — 아래 핑을 건너뛰므로
+      # 이틀 동안 한 번도 성공하지 못하면 메일이 온다. 그게 진짜 신호다.
+      - name: 출처가 막혔으면 이번 실행은 건너뛴다
+        if: steps.reach.outputs.blocked == 'yes'
+        run: |
+          echo "::warning::출처 도달 불가(${{ steps.reach.outputs.blocked_hosts }}). 이번 실행을 건너뜁니다. 다음 예약 실행이 다른 IP 로 재시도합니다."
+          {
+            echo "## 이번 실행 건너뜀"
+            echo
+            echo "출처에 닿지 못했습니다: \`${{ steps.reach.outputs.blocked_hosts }}\`"
+            echo
+            echo "한국 정부망(27.101.x)이 러너 IP 에 따라 간헐적으로 막힙니다."
+            echo "3시간 뒤 다른 IP 로 자동 재시도하며, **원장은 그대로입니다**."
+            echo "이틀 동안 한 번도 성공하지 못하면 healthchecks.io 가 메일로 알립니다."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       # ★프리플라이트★ OC=test 가 막히면 1차 정본 출처가 통째로 죽는다.
       # 개인 OC 는 서버 IP 등록을 요구해 유동 IP 인 GitHub Actions 에서 대체가 안 된다.
       # 여기서 조용히 넘어가면 이후 전부 '파싱 실패' 로 보여 원인을 못 찾는다.
       - name: 법제처 DRF 프리플라이트
+        if: steps.reach.outputs.blocked != 'yes'
         run: |
           node -e "
             require('./tools/lib/law-go-kr.js').preflight()
@@ -113,6 +142,7 @@ jobs:
           "
 
       - name: 출처 수집 (2개 이상 독립 출처)
+        if: steps.reach.outputs.blocked != 'yes'
         run: |
           node tools/fetch-rates.js --year "${{ steps.cfg.outputs.year }}" \
             --out "data/candidates/observations-${{ steps.cfg.outputs.year }}.json"
@@ -121,6 +151,7 @@ jobs:
       # 종료 코드 0=통과 / 1=사람 확인 필요 / 2=FATAL.
       - name: 교차검증 · 위생검사 · 원장 반영
         id: update
+        if: steps.reach.outputs.blocked != 'yes'
         run: |
           set +e
           node tools/update-rates.js \
@@ -279,7 +310,7 @@ jobs:
       # 낡음 감시 — '실패 시 멈춤' 은 감시가 없으면 무기한 침묵이 된다.
       - name: 낡음(staleness) 감시
         id: stale
-        if: always()
+        if: always() && steps.reach.outputs.blocked != 'yes'
         run: |
           set +e
           node tools/sanity-check.js "data/rates-${{ steps.cfg.outputs.year }}.json" \
@@ -291,8 +322,12 @@ jobs:
       # GitHub 은 '실패' 만 알린다. '예약 실행이 드롭됨' / '워크플로 비활성화' /
       # '월 2,000분 소진' 세 가지 침묵 실패는 절대 알려주지 못한다.
       # 이 프로젝트가 두려워하는 것(몇 달간 틀린 요율)은 전부 그 셋에서 나온다.
+      # ★차단된 실행에서는 핑을 보내지 않는다.★
+      # 출처를 하나도 못 읽었는데 "살아 있음" 신호를 보내면, 며칠째 아무것도
+      # 확인하지 못하고 있는데도 healthchecks 는 정상으로 본다. 그러면 이 장치가
+      # 존재하는 이유가 사라진다. 핑은 "오늘 실제로 요율을 확인했다" 는 뜻이어야 한다.
       - name: 하트비트 핑 (healthchecks.io)
-        if: success()
+        if: success() && steps.reach.outputs.blocked != 'yes'
         run: |
           if [ -z "${{ secrets.HEALTHCHECK_URL }}" ]; then
             echo "::warning::HEALTHCHECK_URL 시크릿이 없습니다. 외부 dead-man switch 없이는 '워크플로가 아예 안 돈 것' 을 아무도 알 수 없습니다. 반드시 설정하십시오."
@@ -304,7 +339,10 @@ jobs:
       # ★assign 은 watch 설정과 무관하게 알림을 보장한다.★
       # 매일 도는 워크플로이므로 중복 방지가 없으면 이슈가 365개 쌓인다.
       - name: 이슈 생성 / 코멘트
-        if: always() && (failure() || steps.update.outputs.code != '0' || steps.stale.outputs.code == '2')
+        if: |
+          always()
+          && steps.reach.outputs.blocked != 'yes'
+          && (failure() || steps.update.outputs.code != '0' || steps.stale.outputs.code == '2')
         run: |
           set -e
           URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
