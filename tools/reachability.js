@@ -25,7 +25,16 @@ const HOSTS = [
   ["github.com", "대조군 — 여기까지 막히면 러너 네트워크 문제"],
 ];
 
-const TIMEOUT = 8000;
+/**
+ * ★8초는 너무 짧아서 '느림' 을 '차단' 으로 잘못 보고했다.★
+ * 러너에서 law.go.kr 은 TLS 만 5.7초가 걸렸고, 남은 예산으로 HTTP 를 못 끝내
+ * AbortError 가 났다. 진단 도구가 오판을 만들면 대응 방향 자체가 틀어진다.
+ * 넉넉히 주고, 대신 걸린 시간을 항상 함께 보고해 느림이 눈에 보이게 한다.
+ */
+const TIMEOUT = 30000;
+
+/** 이 시간을 넘으면 '되긴 되지만 위험하게 느리다' 고 표시한다. */
+const SLOW_MS = 3000;
 
 /** DNS A 레코드. 실패하면 이름 해석 단계에서 막힌 것이다. */
 async function resolve(host) {
@@ -99,10 +108,17 @@ const mark = (r) => (r.ok ? "OK" : "실패");
     const h = s.ok ? await http(host) : { ok: false, err: "-" };
     rows.push({ host, label, d, t, s, h });
 
-    const cell = (r) => (r.ok ? "OK" + (r.ms ? ` ${r.ms}ms` : "") : `❌ ${r.err}`);
+    const cell = (r) => {
+      if (!r.ok) return `❌ ${r.err}`;
+      if (!r.ms) return "OK";
+      return (r.ms >= SLOW_MS ? "🐢 " : "OK ") + `${r.ms}ms`;
+    };
+    const httpCell = h.ok
+      ? (h.ms >= SLOW_MS ? "🐢 " : "") + `HTTP ${h.status} ${h.ms}ms`
+      : `❌ ${h.err} (${h.ms}ms)`;
     console.log(
       `| \`${host}\` | ${d.ok ? d.ips[0] : "❌ " + d.err} | ${cell(t)} | ${cell(s)} | ` +
-      `${h.ok ? "HTTP " + h.status : "❌ " + h.err} | ${label} |`
+      `${httpCell} | ${label} |`
     );
   }
 
@@ -121,6 +137,15 @@ const mark = (r) => (r.ok ? "OK" : "실패");
     console.log(`- 일부만 막혔습니다: ${blocked.join(", ")}`);
     console.log("  막힌 출처를 대체하거나, 남은 출처만으로 교차검증이 가능한지 따져야 합니다.");
   } else {
-    console.log("- 모든 출처에 닿습니다. 실패했다면 일시 장애이거나 특정 경로의 문제입니다.");
+    console.log("- 모든 출처에 닿습니다.");
+  }
+
+  // 닿기는 하는데 느린 곳을 따로 짚는다. 여기서 간헐적 'fetch failed' 가 나온다.
+  const slow = rows.filter((r) => r.h.ok && (r.h.ms >= SLOW_MS || r.s.ms >= SLOW_MS));
+  if (slow.length) {
+    console.log("- 🐢 **느린 출처**: " +
+      slow.map((r) => `${r.host}(TLS ${r.s.ms}ms, HTTP ${r.h.ms}ms)`).join(", "));
+    console.log("  차단은 아니지만 지연이 커지면 간헐적으로 끊깁니다. " +
+      "tools/lib/net.js 의 HOST_MIN_TIMEOUT_MS 로 하한을 두고 있습니다.");
   }
 })();

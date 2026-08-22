@@ -30,11 +30,38 @@ const HOST_MIN_INTERVAL_MS = {
   "*": 300,
 };
 
+/**
+ * 호스트별 최소 타임아웃·재시도(ms).
+ *
+ * ★law.go.kr 은 GitHub Actions 에서 유난히 느리다.★ 실측(2026-08-22, 러너):
+ *   TCP 384ms / TLS 5,683ms / HTTP 타임아웃.
+ *   같은 시각 다른 한국 출처는 TLS 0.7~1.4초, 국내 PC 에서는 78ms 였다.
+ *   차단이 아니라 지연이며, 지연이 커지면 간헐적으로 'fetch failed' 로 끊긴다.
+ *   실제로 예약 실행 두 번이 이것 때문에 죽었다.
+ *
+ * 호출 지점마다 타임아웃을 적는 방식은 새 호출을 추가할 때 반드시 잊힌다.
+ * 그래서 호출자가 더 짧게 요청해도 여기 하한을 밑돌지 않게 한다.
+ */
+const HOST_MIN_TIMEOUT_MS = {
+  "www.law.go.kr": 60000,
+  "law.go.kr": 60000,
+  "*": 0,
+};
+const HOST_MIN_RETRIES = {
+  "www.law.go.kr": 4,
+  "law.go.kr": 4,
+  "*": 0,
+};
+
 /** 호스트별 마지막 호출 시각. */
 const lastCallAt = new Map();
 
 /** 호스트별 누적 호출 수. 폭주 방지용 상한을 건다. */
 const callCount = new Map();
+/* 호스트별 호출 상한. 재시도도 실제 요청이므로 여기에 포함된다.
+   law.go.kr 은 느려서 재시도를 4회까지 허용했으므로 상한도 함께 올려야 한다.
+   그러지 않으면 재시도가 상한을 먹어 '호출 상한 초과' 로 엉뚱하게 죽는다. */
+const MAX_CALLS_PER_HOST_BY_HOST = { "www.law.go.kr": 150, "law.go.kr": 150 };
 const MAX_CALLS_PER_HOST = 40;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -51,9 +78,10 @@ async function throttle(url) {
   const host = hostOf(url);
   const n = (callCount.get(host) || 0) + 1;
   callCount.set(host, n);
-  if (n > MAX_CALLS_PER_HOST) {
+  const cap = MAX_CALLS_PER_HOST_BY_HOST[host] ?? MAX_CALLS_PER_HOST;
+  if (n > cap) {
     throw new Error(
-      `호출 상한 초과: ${host} 에 ${MAX_CALLS_PER_HOST}회를 넘겨 호출했습니다. ` +
+      `호출 상한 초과: ${host} 에 ${cap}회를 넘겨 호출했습니다. ` +
         `무한 루프이거나 재시도가 폭주한 것입니다. 출처를 괴롭히지 않도록 중단합니다.`
     );
   }
@@ -78,12 +106,19 @@ async function throttle(url) {
  */
 async function get(url, opt = {}) {
   const {
-    timeoutMs = 20000,
-    retries = 2,
-    backoffMs = 1500,
     as = "text",
     headers = {},
   } = opt;
+
+  // 느린 출처는 호출자가 짧게 요청해도 하한을 적용한다. 이유는 위 표 참조.
+  const host = hostOf(url);
+  const timeoutMs = Math.max(
+    opt.timeoutMs ?? 20000,
+    HOST_MIN_TIMEOUT_MS[host] ?? HOST_MIN_TIMEOUT_MS["*"]);
+  const retries = Math.max(
+    opt.retries ?? 2,
+    HOST_MIN_RETRIES[host] ?? HOST_MIN_RETRIES["*"]);
+  const backoffMs = opt.backoffMs ?? 1500;
 
   let lastErr;
   for (let attempt = 0; attempt <= retries; attempt++) {
