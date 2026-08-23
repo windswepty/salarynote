@@ -115,11 +115,31 @@
 
   window.addEventListener("popstate", () => go(location.pathname, { push: false }));
 
-  // 옆 페이지를 미리 받아둔다. 3개뿐이라 부담이 없고 전환이 즉시 시작된다.
-  window.addEventListener("load", () => {
-    for (const a of document.querySelectorAll(".nav a")) {
-      const p = new URL(a.href, location.origin).pathname;
-      if (p !== location.pathname) fetchPage(p).catch(() => {});
-    }
-  });
+  /**
+   * 갈 것 같은 페이지만 미리 받는다.
+   *
+   * ★예전에는 load 시점에 내비의 모든 페이지를 받았다.★ 계산기가 3개이던
+   * 시절의 코드였는데 지금은 14개이고, 실수령액표·요율표가 커서 합계 약 180KB 다.
+   * 검색으로 들어와 한 페이지만 보고 떠나는 것이 가장 흔한 경로인데, 그 사람도
+   * 13개 페이지를 전부 내려받았다. 모바일 데이터에서는 그냥 낭비다.
+   *
+   * 마우스를 올리거나 손가락을 대는 순간 받으면, 실제로 이동하는 사람에게는
+   * 체감 차이가 없고(클릭까지 보통 100ms 이상 걸린다) 떠나는 사람은 아무것도
+   * 받지 않는다. 한 번 받은 것은 cache 에 남아 두 번 받지 않는다.
+   */
+  const warmed = new Set();
+  function warm(a) {
+    const p = new URL(a.href, location.origin).pathname;
+    if (p === location.pathname || warmed.has(p)) return;
+    warmed.add(p);
+    fetchPage(p).catch(() => {});
+  }
+
+  for (const a of document.querySelectorAll(".nav a")) {
+    // pointerenter 는 마우스·펜을 잡고, touchstart 는 탭 직전을 잡는다.
+    // focus 는 키보드로 탭 이동하는 경우다.
+    a.addEventListener("pointerenter", () => warm(a));
+    a.addEventListener("touchstart", () => warm(a), { passive: true });
+    a.addEventListener("focus", () => warm(a));
+  }
 })();

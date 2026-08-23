@@ -161,4 +161,17 @@ const mark = (r) => (r.ok ? "OK" : "실패");
       `blocked_hosts=${blockedHosts.join(",")}\n`);
   }
   console.log(`\n<!-- BLOCKED=${blockedHosts.join(",") || "none"} -->`);
-})();
+})().catch((e) => {
+  // ★진단이 죽어도 종료 코드는 0 이다.★ 파일 상단에 그렇게 적어 뒀는데 실제로는
+  // catch 가 없어 예외가 나면 코드 1 로 죽고 blocked 출력도 쓰지 못했다. 그러면
+  // 워크플로의 steps.reach.outputs.blocked 가 빈 값이 되어 차단 게이트가 조용히
+  // 무력화된다. 여기서 잡아 '판단 불가' 를 명시적으로 남긴다.
+  console.error("도달성 진단이 실패했습니다: " + (e && e.message ? e.message : e));
+  console.error("차단 여부를 판정하지 못했으므로 막히지 않은 것으로 간주합니다.");
+  if (process.env.GITHUB_OUTPUT) {
+    try {
+      require("fs").appendFileSync(process.env.GITHUB_OUTPUT,
+        "blocked=unknown\nblocked_hosts=\n");
+    } catch (_) {}
+  }
+});

@@ -61,6 +61,19 @@ for (const [script, args, supportsCheck] of STEPS) {
     failed++;
     process.stderr.write(`\n[${script}] 실패\n`);
     process.stderr.write((e.stdout || "") + (e.stderr || ""));
+
+    // ★쓰기 모드에서는 첫 실패에서 멈춘다.★
+    // 뒤 단계들은 앞 단계의 결과를 읽어 파일을 쓴다. 예를 들어 stamp.js 가
+    // 실패하면 본문 요율이 옛 값으로 남는데, 그대로 faq.js 를 돌리면 그 옛
+    // 숫자가 구조화 데이터에 굳고 bundle.js 는 새 원장으로 engine.js 를 만든다.
+    // 계산은 새 요율, 화면과 구글에 보이는 값은 옛 요율인 트리가 남는다.
+    // 검사 모드는 반대로 끝까지 돌아야 한다 — 어긋난 곳을 한 번에 다 보여줘야
+    // 사람이 여러 번 돌리지 않는다.
+    if (!CHECK) {
+      console.error(`\n[${script}] 에서 중단합니다. 뒤 단계는 이 결과에 의존하므로 ` +
+        `계속하면 절반만 갱신된 트리가 남습니다.`);
+      process.exit(1);
+    }
   }
 }
 
