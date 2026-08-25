@@ -1,66 +1,66 @@
 {
  "/": {
-  "date": "2026-08-23",
-  "hash": "54151204bcd7f910"
+  "date": "2026-08-25",
+  "hash": "0f66b899068f5539"
  },
  "/monthly-salary/": {
-  "date": "2026-08-23",
-  "hash": "bccaf4b1efc505a9"
+  "date": "2026-08-25",
+  "hash": "0e65e0b28397df7f"
  },
  "/four-insurance/": {
-  "date": "2026-08-23",
-  "hash": "416064bd0361521b"
+  "date": "2026-08-25",
+  "hash": "4628f9b53ed5b8c0"
  },
  "/severance-pay/": {
-  "date": "2026-08-23",
-  "hash": "52f66b12abbe807e"
+  "date": "2026-08-25",
+  "hash": "b3ea1d96622f15e3"
  },
  "/weekly-holiday-pay/": {
-  "date": "2026-08-23",
-  "hash": "be4fae8250d4c762"
+  "date": "2026-08-25",
+  "hash": "87985d3a3a6d7670"
  },
  "/annual-leave/": {
-  "date": "2026-08-23",
-  "hash": "3d28c81457ce64b2"
+  "date": "2026-08-25",
+  "hash": "42b8bf159f716873"
  },
  "/wage-converter/": {
-  "date": "2026-08-23",
-  "hash": "4e1f24afc7433311"
+  "date": "2026-08-25",
+  "hash": "2c40442e5f250fdc"
  },
  "/overtime-pay/": {
-  "date": "2026-08-23",
-  "hash": "cb246ab986dbac21"
+  "date": "2026-08-25",
+  "hash": "49e7fb10e1cdce09"
  },
  "/minimum-wage/": {
-  "date": "2026-08-23",
-  "hash": "8c0c147681582b26"
+  "date": "2026-08-25",
+  "hash": "255ec7e39e334745"
  },
  "/part-time/": {
-  "date": "2026-08-23",
-  "hash": "769f04913984ac04"
+  "date": "2026-08-25",
+  "hash": "ed898a7698e07f61"
  },
  "/parental-leave/": {
-  "date": "2026-08-23",
-  "hash": "75e1d6b4a86789e7"
+  "date": "2026-08-25",
+  "hash": "51f586575440b0a6"
  },
  "/unemployment/": {
-  "date": "2026-08-23",
-  "hash": "3e344807b925159b"
+  "date": "2026-08-25",
+  "hash": "6e9cfd21eb1919f1"
  },
  "/salary-table/": {
-  "date": "2026-08-23",
-  "hash": "335c8a38416c9811"
+  "date": "2026-08-25",
+  "hash": "d3f651f2e3cf27bc"
  },
  "/insurance-rates/": {
-  "date": "2026-08-23",
-  "hash": "1b83b5fc98f4dda8"
+  "date": "2026-08-25",
+  "hash": "547dedf6f0670922"
  },
  "/about/": {
-  "date": "2026-08-23",
-  "hash": "37f58cda62713bc6"
+  "date": "2026-08-25",
+  "hash": "87eced2ac3e1557c"
  },
  "/privacy/": {
-  "date": "2026-08-23",
-  "hash": "70951097e6058fc0"
+  "date": "2026-08-25",
+  "hash": "edf0e51be40355e5"
  }
 }
