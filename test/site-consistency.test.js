@@ -242,5 +242,12 @@ t("실업급여 날짜 상한이 원장 코호트와 일치한다", () => {
     "달력 상한이 원장의 마지막 코호트 종료일과 다르다");
 });
 
+t("색인 진행표가 페이지 목록과 어긋나지 않는다", () => {
+  // 새 계산기를 만들고 색인 요청 목록에 넣는 것을 잊으면, 만든 사람만 아는
+  // 페이지가 된다. 검색 유입이 전부인 사이트에서 그건 안 만든 것과 같다.
+  execFileSync(process.execPath,
+    [path.join(ROOT, "tools", "index-status.js"), "--check"], { stdio: "pipe" });
+});
+
 console.log(`\n  ${pass} passed, ${fail} failed\n`);
 process.exit(fail === 0 ? 0 : 1);
