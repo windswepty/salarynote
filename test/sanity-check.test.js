@@ -20,7 +20,19 @@ const { buildCandidate, FACT_MAP } = require(path.join(ROOT, "tools", "update-ra
 const RULES = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "sanity-rules.json"), "utf8"));
 const BASE = JSON.parse(fs.readFileSync(L.ledgerPath, "utf8"));
 const TAX = JSON.parse(fs.readFileSync(L.taxTablePath, "utf8"));
-const TODAY = "2026-08-19";
+/**
+ * ★검사 기준일을 달력에 못 박으면 자동 갱신이 자기 테스트를 부순다.★
+ *
+ * 예전에는 "2026-08-19" 라고 적어 뒀다. 그런데 주간 하트비트가 원장의
+ * lastVerified 를 오늘로 올리는 순간, 원장이 기준일보다 미래가 되어
+ * LAST_VERIFIED_FUTURE 로 8개 테스트가 한꺼번에 깨졌다. 숫자는 하나도 안
+ * 바뀌었는데 봇이 자기 커밋으로 빌드를 빨갛게 만든 셈이다.
+ *
+ * 그런 실패가 반복되면 "또 그거겠지" 하고 넘기게 되고, 진짜 회귀가 섞였을 때
+ * 놓친다. 그래서 '지금' 은 원장이 스스로 말하는 확인일로 둔다. 특정 날짜의
+ * 동작을 봐야 하는 테스트는 아래처럼 그 날짜를 직접 넘긴다.
+ */
+const TODAY = BASE.lastVerified;
 
 let pass = 0;
 let fail = 0;
@@ -559,13 +571,17 @@ t("원장 연도가 과거면 FATAL", () => {
   assert.ok(hasCode(res, "fatal", "LEDGER_YEAR_PAST"));
 });
 
+// 이 두 개는 '언제냐' 만 보는 테스트다. 살아 있는 원장의 lastVerified 를 쓰면
+// 하트비트가 그 날짜를 옮길 때마다 결과가 바뀐다. 확인일을 직접 정한 사본으로 본다.
+const asOf = (lastVerified) => ({ ...BASE, lastVerified });
+
 t("8월 20일 이후에는 다음 연도 최저임금 확인 WARN 이 뜬다", () => {
-  const res = sanity.checkStaleness(BASE, RULES, "2026-08-21");
+  const res = sanity.checkStaleness(asOf("2026-08-01"), RULES, "2026-08-21");
   assert.ok(hasCode(res, "warn", "STALE_NEXT_MW"));
 });
 
 t("정상 시점에는 낡음 경보가 없다", () => {
-  const res = sanity.checkStaleness(BASE, RULES, "2026-08-19");
+  const res = sanity.checkStaleness(asOf("2026-06-01"), RULES, "2026-06-02");
   assert.deepStrictEqual(codes(res, "fatal"), []);
   assert.deepStrictEqual(codes(res, "warn"), []);
 });

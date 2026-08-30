@@ -7,3 +7,6 @@ Thumbs.db
 # 자동 갱신 파이프라인의 중간 산출물.
 # 관측·후보 원장은 커밋하지 않는다. 원장(data/rates-*.json)만 정본이다.
 data/candidates/
+
+tools/__pycache__/
+*.pyc

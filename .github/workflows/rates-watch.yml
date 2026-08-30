@@ -297,8 +297,18 @@ jobs:
       # ★매일 커밋하면 Cloudflare Pages 가 매일 재배포된다.★ 내용이 같은 번들을
       # 매일 배포하는 것은 무의미한 churn 이므로 7일에 한 번만 민다.
       # 진짜 생존 신호는 아래의 외부 dead-man switch 다.
+      # ★테스트가 빨간 채로 main 에 밀어 넣지 않는다.★
+      # 2026-08-25 하트비트가 lastVerified 를 올렸는데, 테스트에 검사 기준일이
+      # "2026-08-19" 로 못 박혀 있어 원장이 기준일보다 미래가 됐다. 8개 테스트가
+      # 깨진 채로 이 단계가 그대로 main 에 push 했고, 사람은 아무 알림도 받지
+      # 못했다. 봇이 자기 커밋으로 저장소를 깨뜨리고 조용히 넘어간 것이다.
+      # 값이 안 바뀐 하트비트는 급할 이유가 전혀 없다. 빨간 동안은 참는다.
       - name: 하트비트 커밋 (7일에 한 번)
-        if: steps.update.outputs.code == '0' && steps.pr.outputs.created != 'yes' && github.event.inputs.dry_run != 'true'
+        if: |
+          steps.update.outputs.code == '0'
+          && steps.pr.outputs.created != 'yes'
+          && steps.tests.outputs.failed != 'yes'
+          && github.event.inputs.dry_run != 'true'
         run: |
           set -e
           # update-rates --apply 가 이미 작업 트리의 lastVerified 를 오늘로 바꿔 놨다.
@@ -379,11 +389,21 @@ jobs:
           always()
           && steps.reach.outputs.blocked != 'yes'
           && (failure() || steps.update.outputs.code != '0' || steps.stale.outputs.code == '2'
-              || steps.taxtable.outputs.code != '0' || steps.stale.outputs.warn == 'yes')
+              || steps.taxtable.outputs.code != '0' || steps.stale.outputs.warn == 'yes'
+              || steps.tests.outputs.failed == 'yes')
         run: |
           set -e
           URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           BODY="$RUNNER_TEMP/issue.md"
+
+          # ★본문을 쓰기 전에 정해야 한다.★ 아래 블록이 $URGENT 를 읽는다.
+          URGENT=no
+          [ "${{ steps.update.outputs.code }}" != "0" ] && URGENT=yes
+          [ "${{ steps.stale.outputs.code }}" = "2" ] && URGENT=yes
+          [ "${{ steps.taxtable.outputs.code }}" != "0" ] && URGENT=yes
+          [ "${{ steps.tests.outputs.failed }}" = "yes" ] && URGENT=yes
+          [ "${{ job.status }}" = "failure" ] && URGENT=yes
+
           {
             if [ "$URGENT" = "no" ]; then
               echo "### 지금 틀린 것은 없습니다"
@@ -401,6 +421,16 @@ jobs:
             echo "- update-rates 종료 코드: \`${{ steps.update.outputs.code }}\` (0=통과 / 1=사람 확인 / 2=FATAL)"
             echo "- **원장은 변경되지 않았습니다. 사이트는 마지막 정상값으로 계속 동작합니다.**"
             echo
+            if [ "${{ steps.tests.outputs.failed }}" = "yes" ]; then
+              echo '---'; echo
+              echo "### 테스트 실패:${{ steps.tests.outputs.list }}"
+              echo
+              echo "값이 바뀌지 않았는데 테스트가 깨졌다면 저장소 쪽 문제입니다."
+              echo "(검사 기준일을 못 박아 둔 테스트, 줄바꿈 변환 등)"
+              echo
+              [ -f "$RUNNER_TEMP/tests.md" ] && cat "$RUNNER_TEMP/tests.md"
+              echo
+            fi
             [ -f "$RUNNER_TEMP/report.md" ] && cat "$RUNNER_TEMP/report.md"
             echo
             [ -f "$RUNNER_TEMP/stale.md" ] && { echo '---'; echo; cat "$RUNNER_TEMP/stale.md"; }
@@ -408,13 +438,6 @@ jobs:
             [ -f "$RUNNER_TEMP/taxtable.md" ] && { echo; echo '---'; echo; echo '### 간이세액표 원문 대조'; echo; echo '```'; cat "$RUNNER_TEMP/taxtable.md"; echo '```'; }
             [ -f "$RUNNER_TEMP/reach.md" ] && { echo; echo '---'; echo; cat "$RUNNER_TEMP/reach.md"; }
           } > "$BODY"
-
-          # 이번 실행이 '곧 틀려진다'(낡음 WARN) 뿐인지, '지금 문제다' 인지 가른다.
-          URGENT=no
-          [ "${{ steps.update.outputs.code }}" != "0" ] && URGENT=yes
-          [ "${{ steps.stale.outputs.code }}" = "2" ] && URGENT=yes
-          [ "${{ steps.taxtable.outputs.code }}" != "0" ] && URGENT=yes
-          [ "${{ job.status }}" = "failure" ] && URGENT=yes
 
           N=$(gh issue list --state open --label rates-alert --json number --jq '.[0].number // empty' || true)
           if [ -n "$N" ]; then
