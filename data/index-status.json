@@ -8,21 +8,85 @@
   },
   "$순서": "todo 중에서는 이 파일에 적힌 order 가 작은 것부터 요청한다. 할당량이 하루 1건이라 순서가 곧 우선순위다.",
   "pages": {
-    "/":                    { "status": "indexed",   "date": "2026-08-20", "order": 1 },
-    "/overtime-pay/":       { "status": "indexed",   "date": "2026-08-21", "order": 2 },
-    "/minimum-wage/":       { "status": "indexed",   "date": "2026-08-22", "order": 3 },
-    "/parental-leave/":     { "status": "indexed",   "date": "2026-08-24", "order": 4 },
-    "/salary-table/":       { "status": "indexed",   "date": "2026-08-25", "order": 5 },
-    "/insurance-rates/":    { "status": "indexed",   "date": "2026-08-26", "order": 6 },
-    "/monthly-salary/":     { "status": "todo",      "date": null,         "order": 7 },
-    "/four-insurance/":     { "status": "todo",      "date": null,         "order": 8 },
-    "/severance-pay/":      { "status": "todo",      "date": null,         "order": 9 },
-    "/unemployment/":       { "status": "todo",      "date": null,         "order": 10 },
-    "/annual-leave/":       { "status": "todo",      "date": null,         "order": 11 },
-    "/weekly-holiday-pay/": { "status": "todo",      "date": null,         "order": 12 },
-    "/part-time/":          { "status": "todo",      "date": null,         "order": 13 },
-    "/wage-converter/":     { "status": "todo",      "date": null,         "order": 14 },
-    "/about/":              { "status": "skip",      "date": null,         "order": 90 },
-    "/privacy/":            { "status": "skip",      "date": null,         "order": 91 }
+    "/": {
+      "status": "indexed",
+      "date": "2026-08-20",
+      "order": 1
+    },
+    "/overtime-pay/": {
+      "status": "indexed",
+      "date": "2026-08-21",
+      "order": 2
+    },
+    "/minimum-wage/": {
+      "status": "indexed",
+      "date": "2026-08-22",
+      "order": 3
+    },
+    "/parental-leave/": {
+      "status": "indexed",
+      "date": "2026-08-24",
+      "order": 4
+    },
+    "/salary-table/": {
+      "status": "indexed",
+      "date": "2026-08-25",
+      "order": 5
+    },
+    "/insurance-rates/": {
+      "status": "indexed",
+      "date": "2026-08-26",
+      "order": 6
+    },
+    "/monthly-salary/": {
+      "status": "requested",
+      "date": "2026-08-30",
+      "order": 7
+    },
+    "/four-insurance/": {
+      "status": "todo",
+      "date": null,
+      "order": 8
+    },
+    "/severance-pay/": {
+      "status": "todo",
+      "date": null,
+      "order": 9
+    },
+    "/unemployment/": {
+      "status": "todo",
+      "date": null,
+      "order": 10
+    },
+    "/annual-leave/": {
+      "status": "todo",
+      "date": null,
+      "order": 11
+    },
+    "/weekly-holiday-pay/": {
+      "status": "todo",
+      "date": null,
+      "order": 12
+    },
+    "/part-time/": {
+      "status": "todo",
+      "date": null,
+      "order": 13
+    },
+    "/wage-converter/": {
+      "status": "todo",
+      "date": null,
+      "order": 14
+    },
+    "/about/": {
+      "status": "skip",
+      "date": null,
+      "order": 90
+    },
+    "/privacy/": {
+      "status": "skip",
+      "date": null,
+      "order": 91
+    }
   }
 }
