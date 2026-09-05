@@ -39,23 +39,23 @@
       "order": 6
     },
     "/monthly-salary/": {
-      "status": "requested",
-      "date": "2026-08-30",
+      "status": "indexed",
+      "date": "2026-09-05",
       "order": 7
     },
     "/four-insurance/": {
-      "status": "todo",
-      "date": null,
+      "status": "indexed",
+      "date": "2026-09-05",
       "order": 8
     },
     "/severance-pay/": {
-      "status": "todo",
-      "date": null,
+      "status": "indexed",
+      "date": "2026-09-05",
       "order": 9
     },
     "/unemployment/": {
-      "status": "todo",
-      "date": null,
+      "status": "indexed",
+      "date": "2026-09-05",
       "order": 10
     },
     "/annual-leave/": {
@@ -84,8 +84,8 @@
       "order": 90
     },
     "/privacy/": {
-      "status": "skip",
-      "date": null,
+      "status": "indexed",
+      "date": "2026-09-05",
       "order": 91
     }
   }
