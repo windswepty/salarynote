@@ -4,8 +4,8 @@
     {
       "name": "salarynote",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8788", "--directory", "web"],
-      "port": 8788
+      "runtimeArgs": ["-m", "http.server", "8787", "--directory", "web"],
+      "port": 8787
     }
   ]
 }

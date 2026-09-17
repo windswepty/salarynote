@@ -249,5 +249,88 @@ t("색인 진행표가 페이지 목록과 어긋나지 않는다", () => {
     [path.join(ROOT, "tools", "index-status.js"), "--check"], { stdio: "pipe" });
 });
 
+t("근거 법령 블록이 원장과 일치한다 (law-refs --check)", () => {
+  execFileSync(process.execPath, [path.join(ROOT, "build", "law-refs.js"), "--check"], { stdio: "pipe" });
+});
+
+t("모든 계산기 페이지에 근거 법령이 있다", () => {
+  const REFS = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "law-refs.json"), "utf8"));
+  const PAGES = require(path.join(ROOT, "build", "pages.js"));
+  // 소개·개인정보처리방침은 계산을 하지 않으므로 근거 법령이 없는 것이 맞다.
+  const exempt = new Set(["/about/", "/privacy/"]);
+  const missing = PAGES.filter((p) => !exempt.has(p.url) && !REFS.pages[p.url]).map((p) => p.url);
+  assert.strictEqual(missing.length, 0,
+    `근거 법령이 없는 계산기 페이지: ${missing.join(", ")}`);
+});
+
+t("★근거 법령이 실제 화면에 나온다★", () => {
+  const REFS = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "law-refs.json"), "utf8"));
+  for (const [url, page] of Object.entries(REFS.pages)) {
+    const file = path.join(WEB, url === "/" ? "index.html" : path.join(url.slice(1), "index.html"));
+    const src = fs.readFileSync(file, "utf8");
+    for (const k of page.articles) {
+      const a = REFS.articles[k];
+      // 조문 번호가 본문에 그대로 있어야 한다. 블록만 있고 내용이 비면 소용없다.
+      assert.ok(src.includes(`${a.law} ${a.jo}`),
+        `${url} 에 '${a.law} ${a.jo}' 가 없다`);
+    }
+  }
+});
+
+t("★근거 법령 링크가 법제처 주소 형식이다★", () => {
+  const REFS = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "law-refs.json"), "utf8"));
+  for (const [k, a] of Object.entries(REFS.articles)) {
+    // 법령명에서 공백을 빼야 법제처가 200 을 준다. 공백이 남으면 404 가 된다.
+    const want = `https://www.law.go.kr/법령/${a.law.replace(/\s+/g, "")}/${a.jo}`;
+    assert.ok(/^제\d+조(의\d+)?$/.test(a.jo), `${k}: 조 형식이 이상하다 — ${a.jo}`);
+    assert.ok(!want.includes(" "), `${k}: 링크에 공백이 남았다 — ${want}`);
+  }
+});
+
+t("근거 법령 항목 수가 읽을 만한 범위다", () => {
+  const REFS = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "law-refs.json"), "utf8"));
+  // 너무 많으면 아무도 안 읽어서 근거를 다는 의미가 사라지고,
+  // 비어 있으면 블록만 있고 내용이 없는 꼴이 된다.
+  for (const [url, page] of Object.entries(REFS.pages)) {
+    assert.ok(page.articles.length >= 1, `${url}: 비어 있다`);
+    assert.ok(page.articles.length <= 10, `${url}: ${page.articles.length}개로 너무 많다`);
+    assert.ok(page.note && page.note.includes("법적 효력은 없습니다"),
+      `${url}: 면책 문구가 없다`);
+  }
+});
+
+t("★법령 근거가 HTML 에 손으로 적혀 있지 않다★", () => {
+  // 손으로 적은 법령은 아무도 검증하지 않는다. 실제로 실업급여 푸터의
+  // '고용보험법 시행규칙 제91조' 는 전혀 다른 내용(수강증명서)이었다.
+  const offenders = [];
+  for (const f of htmls) {
+    const src = fs.readFileSync(f, "utf8");
+    if (/<p>근거:/.test(src)) offenders.push(path.relative(WEB, f));
+  }
+  assert.strictEqual(offenders.length, 0,
+    `푸터에 손으로 적은 근거 줄이 남아 있다: ${offenders.join(", ")}`);
+});
+
+t("모든 계산기 페이지에 면책 문구가 있다", () => {
+  const REFS = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "law-refs.json"), "utf8"));
+  for (const url of Object.keys(REFS.pages)) {
+    const file = path.join(WEB, url === "/" ? "index.html" : path.join(url.slice(1), "index.html"));
+    const src = fs.readFileSync(file, "utf8");
+    assert.ok(src.includes("<!--LAWNOTE-->"), `${url} 에 면책 표식이 없다`);
+    assert.ok(src.includes(REFS.pages[url].note), `${url} 의 면책 문구가 원장과 다르다`);
+  }
+});
+
+t("근거 법령 원장에 죽은 키가 없다", () => {
+  const REFS = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "law-refs.json"), "utf8"));
+  const used = new Set(Object.values(REFS.pages).flatMap((p) => p.articles));
+  for (const k of used) {
+    assert.ok(REFS.articles[k], `pages 가 가리키는 조문이 없다: ${k}`);
+  }
+  const unused = Object.keys(REFS.articles).filter((k) => !used.has(k));
+  assert.strictEqual(unused.length, 0, `어느 페이지에서도 안 쓰는 조문: ${unused.join(", ")}`);
+});
+
+
 console.log(`\n  ${pass} passed, ${fail} failed\n`);
 process.exit(fail === 0 ? 0 : 1);

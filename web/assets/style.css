@@ -216,6 +216,23 @@ details .row { margin-top: var(--s3); }
 .links a:hover { border-color: var(--line-2); background: var(--surface); }
 .links a span { display: block; font-weight: 400; font-size: 12px; color: var(--muted); margin-top: 1px; }
 
+/* ---------- 근거 법령 ---------- */
+/* 검색어에 조문 번호까지 적어 찾는 사람이 있어 만들었다.
+   계산 결과보다 약하게 두어 결과를 가리지 않게 한다. */
+.lawref { margin-top: var(--s6); padding-top: var(--s5); border-top: 1px solid var(--line); }
+.lawref h2 {
+  font-size: 13px; font-weight: 700; color: var(--ink);
+  margin: 0 0 var(--s2); letter-spacing: -.01em;
+}
+.lawref > p { font-size: 12.5px; color: var(--muted); margin: 0 0 var(--s3); word-break: keep-all; }
+.lawref ul { list-style: none; padding: 0; margin: 0; }
+.lawref li { font-size: 13px; margin: var(--s2) 0; word-break: keep-all; line-height: 1.5; }
+.lawref a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.lawref a:hover { text-decoration: underline; }
+.lawref-t { color: var(--muted); font-weight: 400; }
+.lawref-t::before { content: "— "; }
+.lawref-x { font-size: 12.5px; color: var(--muted); margin: var(--s3) 0 0; word-break: keep-all; }
+
 /* ---------- 설명 글 ---------- */
 .prose { font-size: 14.5px; color: var(--ink-2); line-height: 1.75; word-break: keep-all; }
 .prose h2 {
