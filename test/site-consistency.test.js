@@ -332,5 +332,69 @@ t("근거 법령 원장에 죽은 키가 없다", () => {
 });
 
 
+t("애드센스 상태가 원장과 일치한다 (adsense --check)", () => {
+  execFileSync(process.execPath, [path.join(ROOT, "build", "adsense.js"), "--check"], { stdio: "pipe" });
+});
+
+t("★광고 스위치를 껐다 켜면 바이트가 그대로다★", () => {
+  // 위치가 흔들리면 내용이 같은데도 16개 파일이 '바뀜' 으로 잡히고,
+  // set-base-url.js 가 내용 해시로 lastmod 를 정하므로 sitemap 이 전 페이지를
+  // '오늘 수정됨' 으로 신고한다. 그런 거짓 신고가 반복되면 구글이 우리
+  // lastmod 를 믿지 않게 되고, 진짜 바뀐 날 재크롤링이 늦어진다.
+  const ads = path.join(ROOT, "build", "adsense.js");
+  const ledger = path.join(ROOT, "data", "adsense.json");
+
+  const before = new Map();
+  for (const f of htmls) before.set(f, fs.readFileSync(f, "utf8"));
+  const adsTxt = path.join(WEB, "ads.txt");
+  const adsBefore = fs.existsSync(adsTxt) ? fs.readFileSync(adsTxt, "utf8") : null;
+  const ledgerBefore = fs.readFileSync(ledger, "utf8");
+
+  try {
+    execFileSync(process.execPath, [ads, "--off"], { stdio: "pipe" });
+    // 꺼진 동안에는 광고 흔적이 하나도 없어야 한다.
+    for (const f of htmls) {
+      const s = fs.readFileSync(f, "utf8");
+      assert.ok(!s.includes("adsbygoogle"), `${path.relative(WEB, f)} 에 광고 코드가 남아 있다`);
+      assert.ok(!s.includes("<!--ADSENSE-->"), `${path.relative(WEB, f)} 에 광고 표식이 남아 있다`);
+    }
+    assert.ok(!fs.existsSync(adsTxt), "꺼진 상태인데 ads.txt 가 남아 있다");
+
+    execFileSync(process.execPath, [ads, "--on"], { stdio: "pipe" });
+  } finally {
+    // 테스트가 중간에 깨져도 원래 상태로 돌려놓는다.
+    if (fs.readFileSync(ledger, "utf8") !== ledgerBefore) fs.writeFileSync(ledger, ledgerBefore, "utf8");
+  }
+
+  for (const [f, s] of before) {
+    assert.strictEqual(fs.readFileSync(f, "utf8"), s,
+      `${path.relative(WEB, f)} 가 껐다 켠 뒤 달라졌다`);
+  }
+  const adsAfter = fs.existsSync(adsTxt) ? fs.readFileSync(adsTxt, "utf8") : null;
+  assert.strictEqual(adsAfter, adsBefore, "ads.txt 가 껐다 켠 뒤 달라졌다");
+});
+
+t("광고 코드는 언제나 </head> 바로 앞에 온다", () => {
+  // 자리가 하나여야 껐다 켜도 같은 결과가 나온다.
+  const cfg = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "adsense.json"), "utf8"));
+  if (cfg.enabled === false) return; // 꺼진 상태에서는 검사할 것이 없다
+  for (const f of htmls) {
+    const s = fs.readFileSync(f, "utf8");
+    if (!s.includes("<!--ADSENSE-->")) continue;
+    const after = s.slice(s.indexOf("<!--/ADSENSE-->"));
+    assert.ok(/^<!--\/ADSENSE-->\s*<\/head>/i.test(after),
+      `${path.relative(WEB, f)}: 광고 코드가 </head> 바로 앞이 아니다`);
+  }
+});
+
+t("오류 페이지에는 광고가 붙지 않는다", () => {
+  // 애드센스 프로그램 정책. 붙으면 계정 제재 사유가 된다.
+  const notFound = path.join(WEB, "404.html");
+  if (!fs.existsSync(notFound)) return;
+  const s = fs.readFileSync(notFound, "utf8");
+  assert.ok(!s.includes("adsbygoogle"), "404.html 에 광고 코드가 있다");
+});
+
+
 console.log(`\n  ${pass} passed, ${fail} failed\n`);
 process.exit(fail === 0 ? 0 : 1);
