@@ -39,8 +39,8 @@
       "order": 6
     },
     "/monthly-salary/": {
-      "status": "indexed",
-      "date": "2026-09-05",
+      "status": "todo",
+      "date": null,
       "order": 7
     },
     "/four-insurance/": {
@@ -59,18 +59,18 @@
       "order": 10
     },
     "/annual-leave/": {
-      "status": "todo",
-      "date": null,
+      "status": "indexed",
+      "date": "2026-09-17",
       "order": 11
     },
     "/weekly-holiday-pay/": {
-      "status": "todo",
-      "date": null,
+      "status": "indexed",
+      "date": "2026-09-17",
       "order": 12
     },
     "/part-time/": {
-      "status": "todo",
-      "date": null,
+      "status": "indexed",
+      "date": "2026-09-17",
       "order": 13
     },
     "/wage-converter/": {
