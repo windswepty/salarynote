@@ -74,8 +74,8 @@
       "order": 13
     },
     "/wage-converter/": {
-      "status": "todo",
-      "date": null,
+      "status": "indexed",
+      "date": "2026-09-17",
       "order": 14
     },
     "/about/": {
