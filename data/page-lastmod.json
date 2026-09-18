@@ -1,66 +1,66 @@
 {
  "/": {
   "date": "2026-09-18",
-  "hash": "620f506e7bddc76d"
+  "hash": "db330fdda37ac6ab"
  },
  "/monthly-salary/": {
   "date": "2026-09-18",
-  "hash": "c14c37ac35e6214e"
+  "hash": "b2b3e1ecc5d75565"
  },
  "/four-insurance/": {
   "date": "2026-09-18",
-  "hash": "9cadc77250ddae44"
+  "hash": "26469e74e928b1ea"
  },
  "/severance-pay/": {
   "date": "2026-09-18",
-  "hash": "0a984ff9ec04dd57"
+  "hash": "58ce8be96f86894c"
  },
  "/weekly-holiday-pay/": {
   "date": "2026-09-18",
-  "hash": "a34c2f93a6ad0b34"
+  "hash": "22eb033bb315ff91"
  },
  "/annual-leave/": {
   "date": "2026-09-18",
-  "hash": "c2f1cceca2f9f2bf"
+  "hash": "8e14b58e11bdc302"
  },
  "/wage-converter/": {
   "date": "2026-09-18",
-  "hash": "6f699b61dfe68a5e"
+  "hash": "8fb2877d7a2398d2"
  },
  "/overtime-pay/": {
   "date": "2026-09-18",
-  "hash": "1504d785f63d261c"
+  "hash": "083eaa0738da1bb8"
  },
  "/minimum-wage/": {
   "date": "2026-09-18",
-  "hash": "9de88e3135a0212b"
+  "hash": "f8679a5cce03cb81"
  },
  "/part-time/": {
   "date": "2026-09-18",
-  "hash": "27389998288c1f67"
+  "hash": "4087a75f1cd3a875"
  },
  "/parental-leave/": {
   "date": "2026-09-18",
-  "hash": "526dcaf1e79c9942"
+  "hash": "8db06b6036e19564"
  },
  "/unemployment/": {
   "date": "2026-09-18",
-  "hash": "3e54129afa6ce1de"
+  "hash": "f5637a4fc8dadb40"
  },
  "/salary-table/": {
   "date": "2026-09-18",
-  "hash": "80e2a76bee2916f1"
+  "hash": "6cdb61b541576125"
  },
  "/insurance-rates/": {
   "date": "2026-09-18",
-  "hash": "273e5ecc1a185ad9"
+  "hash": "afdc6eead1b929cb"
  },
  "/about/": {
   "date": "2026-09-18",
-  "hash": "d6744f325379467f"
+  "hash": "d5dfd3b6d2d9eb9a"
  },
  "/privacy/": {
-  "date": "2026-09-17",
-  "hash": "9b820586a81b16db"
+  "date": "2026-09-18",
+  "hash": "6e9a8b278192e97d"
  }
 }

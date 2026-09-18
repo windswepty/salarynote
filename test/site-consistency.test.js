@@ -396,5 +396,55 @@ t("오류 페이지에는 광고가 붙지 않는다", () => {
 });
 
 
+t("내비·푸터가 pages.js 와 일치한다 (nav --check)", () => {
+  execFileSync(process.execPath, [path.join(ROOT, "build", "nav.js"), "--check"], { stdio: "pipe" });
+});
+
+t("★사이트 안에서 도달할 수 없는 페이지가 없다★", () => {
+  // /about/ 은 인바운드 링크가 0개라 서치콘솔이 '참조 페이지: 감지된 페이지
+  // 없음' 이라고 했고 색인되지 않았다. 링크가 없는 페이지는 구글이 중요하지
+  // 않다고 본다. sitemap 에만 있는 것으로는 부족하다.
+  const PAGES = require(path.join(ROOT, "build", "pages.js"));
+  const inbound = new Map(PAGES.map((p) => [p.url, 0]));
+
+  for (const f of htmls) {
+    const rel = "/" + path.relative(WEB, f).split(path.sep).join("/");
+    const self = rel.replace(/index\.html$/, "");
+    const src = fs.readFileSync(f, "utf8");
+    for (const m of src.matchAll(/href="(\/[^"#?]*)"/g)) {
+      const target = m[1];
+      if (target === self) continue;              // 자기 자신은 세지 않는다
+      if (inbound.has(target)) inbound.set(target, inbound.get(target) + 1);
+    }
+  }
+
+  const orphans = [...inbound].filter(([, n]) => n === 0).map(([u]) => u);
+  assert.strictEqual(orphans.length, 0,
+    `사이트 안에서 링크되지 않는 페이지: ${orphans.join(", ")}`);
+
+  // 한 곳에서만 링크되는 페이지도 위험하다. 그 한 곳이 고아면 같이 묻힌다.
+  const weak = [...inbound].filter(([, n]) => n < 3).map(([u, n]) => `${u}(${n})`);
+  assert.strictEqual(weak.length, 0, `인바운드 링크가 너무 적은 페이지: ${weak.join(", ")}`);
+});
+
+t("모든 페이지에서 개인정보처리방침에 닿을 수 있다", () => {
+  // 애드센스 정책상 개인정보처리방침은 쉽게 찾을 수 있어야 한다.
+  for (const f of htmls) {
+    const rel = path.relative(WEB, f).split(path.sep).join("/");
+    if (rel === "404.html" || rel.startsWith("google") || rel === "privacy/index.html") continue;
+    const src = fs.readFileSync(f, "utf8");
+    assert.ok(src.includes('href="/privacy/"'), `${rel} 에 개인정보처리방침 링크가 없다`);
+  }
+});
+
+t("404 페이지에는 푸터 링크를 넣지 않는다", () => {
+  // sitemap 에도 없고 검색에 걸려서도 안 되는 페이지다.
+  const f = path.join(WEB, "404.html");
+  if (!fs.existsSync(f)) return;
+  assert.ok(!fs.readFileSync(f, "utf8").includes("<!--FOOTLINKS-->"),
+    "404.html 에 푸터 링크가 들어갔다");
+});
+
+
 console.log(`\n  ${pass} passed, ${fail} failed\n`);
 process.exit(fail === 0 ? 0 : 1);

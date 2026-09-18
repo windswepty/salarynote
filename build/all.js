@@ -35,7 +35,7 @@ const BASE_URL = process.env.SN_BASE_URL || "https://salarynote.pages.dev";
 
 /** [스크립트, 추가 인자, --check 를 지원하는가] */
 const STEPS = [
-  ["nav.js", [], false],
+  ["nav.js", [], true],
   ["stamp.js", [], true],
   ["salary-table.js", [], true],
   ["insurance-rates.js", [], true],
