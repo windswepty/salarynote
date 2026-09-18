@@ -39,8 +39,8 @@
       "order": 6
     },
     "/monthly-salary/": {
-      "status": "todo",
-      "date": null,
+      "status": "indexed",
+      "date": "2026-09-19",
       "order": 7
     },
     "/four-insurance/": {
