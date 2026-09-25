@@ -20,7 +20,7 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..");
 const DB_PATH = path.join(ROOT, "data", "index-status.json");
 const PAGES = require(path.join(ROOT, "build", "pages.js"));
-const BASE_URL = process.env.SN_BASE_URL || "https://salarynote.pages.dev";
+const BASE_URL = process.env.SN_BASE_URL || "https://salarynote.kr";
 
 const db = JSON.parse(fs.readFileSync(DB_PATH, "utf8"));
 

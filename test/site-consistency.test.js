@@ -387,6 +387,32 @@ t("광고 코드는 언제나 </head> 바로 앞에 온다", () => {
   }
 });
 
+t("★canonical·robots·sitemap·빌드 기본값이 모두 같은 주소다★", () => {
+  // 주소를 바꿀 때 한 곳이라도 옛 주소로 남으면 구글이 받는 신호가 엇갈린다.
+  // 실제로 set-base-url.js 는 __BASE_URL__ 토큰만 치환했는데, 토큰은 첫 배포 때
+  // 이미 사라져서 .kr 로 옮기려 하자 sitemap 만 바뀌고 canonical 16곳과
+  // robots.txt 는 pages.dev 에 남을 뻔했다. 절반만 옮긴 사이트는 색인에 해롭다.
+  const sitemap = fs.readFileSync(path.join(WEB, "sitemap.xml"), "utf8");
+  const origin = (sitemap.match(/<loc>(https?:\/\/[^/<]+)\//) || [])[1];
+  assert.ok(origin, "sitemap.xml 에서 주소를 찾지 못했다");
+
+  const allJs = fs.readFileSync(path.join(ROOT, "build", "all.js"), "utf8");
+  const dflt = (allJs.match(/SN_BASE_URL \|\| "([^"]+)"/) || [])[1];
+  assert.strictEqual(dflt, origin, "build/all.js 의 기본 주소가 sitemap 과 다르다 — 다음 빌드가 주소를 되돌린다");
+
+  const robots = fs.readFileSync(path.join(WEB, "robots.txt"), "utf8");
+  assert.ok(robots.includes(`Sitemap: ${origin}/sitemap.xml`), `robots.txt 의 Sitemap 이 ${origin} 이 아니다`);
+
+  let n = 0;
+  for (const f of htmls) {
+    const m = fs.readFileSync(f, "utf8").match(/<link rel="canonical" href="([^"]+)"/);
+    if (!m) continue;
+    n++;
+    assert.ok(m[1].startsWith(origin + "/"), `${path.relative(WEB, f)} 의 canonical 이 ${m[1]} 이다(기대: ${origin})`);
+  }
+  assert.ok(n >= 15, `canonical 이 있는 페이지가 ${n}개뿐이다`);
+});
+
 t("오류 페이지에는 광고가 붙지 않는다", () => {
   // 애드센스 프로그램 정책. 붙으면 계정 제재 사유가 된다.
   const notFound = path.join(WEB, "404.html");
