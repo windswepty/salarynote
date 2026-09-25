@@ -33,6 +33,7 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..");
 const sanity = require(path.join(__dirname, "sanity-check.js"));
 const jsonPatch = require(path.join(__dirname, "lib", "json-patch.js"));
+const { kstToday } = require(path.join(__dirname, "lib", "resolve-ledger.js"));
 
 // ── 팩트 → 원장 경로 매핑 ────────────────────────────────────────
 /**
@@ -485,7 +486,7 @@ function parseArgs(argv) {
 
 async function main() {
   const args = parseArgs(process.argv);
-  const today = args.today || new Date().toISOString().slice(0, 10);
+  const today = args.today || kstToday();
   const year = args.year || Number(today.slice(0, 4));
 
   const ledgerPath = args.ledger ? path.resolve(args.ledger) : path.join(ROOT, "data", `rates-${year}.json`);
