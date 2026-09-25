@@ -23,6 +23,11 @@
 
 const fs = require("fs");
 const path = require("path");
+// ★'오늘' 은 KST 다.★ update-rates 는 워크플로가 넘긴 KST 날짜로 lastVerified 를
+// 쓰는데, 여기 기본값이 UTC 였다. 그래서 KST 자정~오전 9시(UTC 15~24시)에 도는
+// 실행은 방금 쓴 lastVerified 가 '미래 날짜' 로 보여 bundle.js 가 FATAL 로 죽었다.
+// 2026-09-19 부터 매일 저녁 실행이 전부 이렇게 실패했다. 날짜 기준은 한 곳에서만 정한다.
+const { kstToday } = require("./lib/resolve-ledger.js");
 
 const ROOT = path.join(__dirname, "..");
 const DEFAULT_RULES = path.join(ROOT, "data", "sanity-rules.json");
@@ -554,7 +559,7 @@ function checkLastVerified(C, ledger, rules, today) {
     C.fatal("LAST_VERIFIED_FORMAT", "lastVerified", `'${v}' 는 달력상 실재하는 YYYY-MM-DD 가 아닙니다.`);
     return;
   }
-  const t = today || new Date().toISOString().slice(0, 10);
+  const t = today || kstToday();
   if (v > t) {
     C.fatal("LAST_VERIFIED_FUTURE", "lastVerified", `미래 날짜입니다: ${v} > ${t}.`);
     return;
@@ -699,7 +704,7 @@ function validateTaxTable(table, rules, prevTable) {
  */
 function checkStaleness(ledger, rules, todayStr) {
   const C = makeCollector();
-  const today = todayStr || new Date().toISOString().slice(0, 10);
+  const today = todayStr || kstToday();
   const y = Number(today.slice(0, 4));
   const md = today.slice(5);
 

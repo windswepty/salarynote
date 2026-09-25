@@ -26,12 +26,16 @@ const FAKE = path.join(__dirname, "fixtures", "fake-future-date.js");
 let pass = 0, fail = 0;
 const t = (n, f) => { try { f(); console.log(`  PASS  ${n}`); pass++; } catch (e) { console.log(`  FAIL  ${n}\n        ${e.message}`); fail++; } };
 
-/** 날짜를 속여 스크립트를 돌린다. { code, err } 를 돌려준다. */
+/**
+ * 날짜를 속여 스크립트를 돌린다. { code, err } 를 돌려준다.
+ * day 에 'YYYY-MM-DDTHH:MM:SSZ' 처럼 시각까지 적으면 그 순간으로 고정한다.
+ */
 function runAt(day, script, args = []) {
+  const env = day.includes("T") ? { SN_FAKE_NOW: day } : { SN_FAKE_TODAY: day };
   try {
     execFileSync(process.execPath, ["-r", FAKE, path.join(ROOT, script), ...args], {
       cwd: ROOT, encoding: "utf8", stdio: "pipe",
-      env: { ...process.env, SN_FAKE_TODAY: day },
+      env: { ...process.env, ...env },
     });
     return { code: 0, err: "" };
   } catch (e) {
@@ -52,6 +56,18 @@ t("현재 연도에서는 빌드가 정상이다", () => {
     const r = runAt(today, s, s.endsWith("stamp.js") ? ["--check"] : []);
     assert.strictEqual(r.code, 0, `${s} 가 현재 연도에서 실패했다:\n${r.err}`);
   }
+});
+
+t("★KST 새벽에도 빌드가 통과한다★ (UTC 로는 아직 어제인 시각)", () => {
+  // 워크플로는 KST 날짜로 lastVerified 를 쓴다. 위생 검사가 '오늘' 을 UTC 로
+  // 잡으면 KST 자정~오전 9시에는 방금 쓴 날짜가 '미래' 가 되어 번들이 죽는다.
+  // 2026-09-19 부터 매일 저녁(UTC) 예약 실행이 이것으로 전부 실패했다.
+  const lv = JSON.parse(fs.readFileSync(L.ledgerPath, "utf8")).lastVerified;
+  const [y, m, d] = lv.split("-").map(Number);
+  // KST lastVerified 06:48 = UTC 전날 21:48. 실제로 실패한 실행의 시각이다.
+  const instant = new Date(Date.UTC(y, m - 1, d, 6, 48) - 9 * 3600 * 1000).toISOString();
+  const r = runAt(instant, "build/bundle.js");
+  assert.strictEqual(r.code, 0, `KST ${lv} 06:48 에 번들이 실패했다:\n${r.err.slice(0, 400)}`);
 });
 
 t("★해가 바뀌고 새 원장이 없으면 번들이 멈춘다★", () => {
