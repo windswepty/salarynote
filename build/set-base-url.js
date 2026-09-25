@@ -7,6 +7,12 @@
  * canonical 을 소유하지 않은 도메인으로 두면 색인에 해롭기 때문에
  * 소스에는 __BASE_URL__ 토큰만 두고 배포 직전에 실제 주소를 넣는다.
  * 도메인을 나중에 사도 이 명령 한 번이면 전부 따라 바뀐다.
+ *
+ * ★토큰만 치환하면 두 번째 주소 변경이 조용히 실패한다.★
+ * 토큰은 첫 배포 때 이미 실제 주소로 바뀌어 web/ 에 남아 있지 않다. 그래서
+ * pages.dev → salarynote.kr 로 옮기려 하자 sitemap 만 새 주소가 되고
+ * canonical 16곳과 robots.txt 는 옛 주소에 남았다("치환된 파일: 0개").
+ * 그래서 지금 배포된 주소를 canonical·robots·sitemap 에서 읽어 와 함께 바꾼다.
  */
 const fs = require("fs");
 const path = require("path");
@@ -35,10 +41,31 @@ function walk(dir, out = []) {
   return out;
 }
 
+/** 지금 web/ 에 박혀 있는 사이트 주소들. canonical·robots·sitemap 에서만 읽는다. */
+function deployedOrigins(files) {
+  const found = new Set();
+  const pats = [
+    /<link rel="canonical" href="(https?:\/\/[^/"]+)\//g,
+    /^Sitemap: (https?:\/\/[^/\s]+)\//gm,
+    /<loc>(https?:\/\/[^/<]+)\//g,
+  ];
+  for (const f of files) {
+    const s = fs.readFileSync(f, "utf8");
+    for (const re of pats) for (const m of s.matchAll(re)) found.add(m[1]);
+  }
+  return [...found];
+}
+
+const files = walk(WEB);
+const oldOrigins = deployedOrigins(files).filter((o) => o !== baseUrl);
+if (oldOrigins.length) console.log(`옛 주소를 바꿉니다: ${oldOrigins.join(", ")} → ${baseUrl}`);
+
 let touched = 0;
-for (const file of walk(WEB)) {
+for (const file of files) {
   const before = fs.readFileSync(file, "utf8");
   let after = before.split("__BASE_URL__").join(baseUrl);
+  // 뒤의 '/' 까지 붙여 바꾼다. 'https://a.kr' 이 'https://a.kr.other' 의 앞부분을 먹지 않게.
+  for (const o of oldOrigins) after = after.split(o + "/").join(baseUrl + "/");
   if (contact) after = after.split("__CONTACT_EMAIL__").join(contact);
   if (after !== before) { fs.writeFileSync(file, after, "utf8"); touched++; }
 }

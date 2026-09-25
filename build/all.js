@@ -31,7 +31,7 @@ const ROOT = path.join(__dirname, "..");
 const CHECK = process.argv.includes("--check");
 
 // 사이트 주소. set-base-url 은 canonical 과 sitemap 을 같이 만든다.
-const BASE_URL = process.env.SN_BASE_URL || "https://salarynote.pages.dev";
+const BASE_URL = process.env.SN_BASE_URL || "https://salarynote.kr";
 
 /** [스크립트, 추가 인자, --check 를 지원하는가] */
 const STEPS = [

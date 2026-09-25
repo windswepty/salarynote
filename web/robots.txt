@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://salarynote.pages.dev/sitemap.xml
+Sitemap: https://salarynote.kr/sitemap.xml
