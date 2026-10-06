@@ -122,6 +122,13 @@
 <div class="card prose">
   <h2><span data-rate="year">2026</span>년 4대보험 요율</h2>
   <p><b>국민연금 <span data-rate="nationalPension.totalRate" data-fmt="pct">9.5%</span></b>(근로자 <span data-rate="nationalPension.employeeRate" data-fmt="pct">4.75%</span>) · <b>건강보험 <span data-rate="healthInsurance.totalRate" data-fmt="pct">7.19%</span></b>(근로자 <span data-rate="healthInsurance.employeeRate" data-fmt="pct">3.595%</span>) · <b>장기요양보험</b>은 건강보험료의 <span data-rate="longTermCare.rateOfHealthPremium" data-fmt="pct">13.14%</span> · <b>고용보험</b> 실업급여 <span data-rate="employmentInsurance.unemploymentTotalRate" data-fmt="pct">1.8%</span>(근로자 <span data-rate="employmentInsurance.employeeRate" data-fmt="pct">0.9%</span>)입니다. 산재보험은 사업주가 전액 부담하므로 근로자 공제액에 없습니다.</p>
+  <h2>계산 순서</h2>
+  <p>① 급여에서 식대(월 20만원까지) 같은 비과세를 빼 <b>보수월액</b>을 구합니다. ② 국민연금은 보수월액의 1,000원 미만을 버린 <b>기준소득월액</b>에 상·하한을 적용하고 근로자 요율을 곱합니다. ③ 건강보험과 고용보험은 보수월액에 각 근로자 요율을 곱합니다. ④ 장기요양보험은 ③에서 나온 건강보험료에 요율을 곱합니다. 각 보험료는 10원 미만을 버립니다.</p>
+
+  <h2>계산 예시</h2>
+  <!--EXAMPLE:fi-300--><figure class="ex"><figcaption>예시 · 월 보수 300만원</figcaption><p>식대 같은 비과세를 뺀 보수월액이 300만원인 직장인입니다(2026년 요율).</p><table><tbody><tr><th>국민연금</th><td>3,000,000 × 4.750% = 142,500원</td></tr><tr><th>건강보험</th><td>3,000,000 × 3.595% = 107,850원</td></tr><tr><th>장기요양</th><td>107,850 × 13.14% = 14,170원</td></tr><tr><th>고용보험</th><td>3,000,000 × 0.9% = 27,000원</td></tr><tr><th>합계</th><td>291,520원</td></tr></tbody></table><p class="ex-r">매달 급여에서 291,520원이 빠지고, 회사도 거의 같은 금액에 고용보험 사업주 몫과 산재보험을 더해 따로 냅니다.</p></figure><!--/EXAMPLE-->
+  <!--EXAMPLE:fi-table--><figure class="ex"><figcaption>예시 · 보수월액별 근로자 부담 합계</figcaption><p>2026년 요율, 국민연금 상·하한은 2026-07-01 부터 적용되는 구간 기준입니다.</p><table><tbody><tr><th>2,000,000원</th><td>194,340원 (연금 95,000원 · 건강 71,900원 · 요양 9,440원 · 고용 18,000원)</td></tr><tr><th>2,500,000원</th><td>242,920원 (연금 118,750원 · 건강 89,870원 · 요양 11,800원 · 고용 22,500원)</td></tr><tr><th>3,000,000원</th><td>291,520원 (연금 142,500원 · 건강 107,850원 · 요양 14,170원 · 고용 27,000원)</td></tr><tr><th>4,000,000원</th><td>388,690원 (연금 190,000원 · 건강 143,800원 · 요양 18,890원 · 고용 36,000원)</td></tr><tr><th>5,000,000원</th><td>485,860원 (연금 237,500원 · 건강 179,750원 · 요양 23,610원 · 고용 45,000원)</td></tr><tr><th>7,000,000원</th><td>660,730원 (연금 313,020원 · 건강 251,650원 · 요양 33,060원 · 고용 63,000원)</td></tr></tbody></table><p class="ex-r">보수월액이 국민연금 상한을 넘으면 연금은 더 늘지 않아 부담 비율이 조금씩 낮아집니다.</p></figure><!--/EXAMPLE-->
+
   <h2>국민연금은 왜 상한이 있나요</h2>
   <p>국민연금은 기준소득월액에 상·하한이 있어 소득이 아무리 높아도 보험료가 무한정 늘지 않습니다. 이 상·하한액은 1월이 아니라 <b>매년 7월 1일</b>에 조정됩니다. 그래서 같은 급여라도 6월과 7월의 국민연금액이 다를 수 있습니다.</p>
   <h2>2026년에 국민연금이 올랐습니다</h2>

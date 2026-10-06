@@ -472,5 +472,36 @@ t("404 페이지에는 푸터 링크를 넣지 않는다", () => {
 });
 
 
+t("계산 예시가 엔진·원장과 일치한다 (examples --check)", () => {
+  // 예시 숫자를 손으로 고치거나 원장만 바뀌면 본문과 계산기가 다른 답을 낸다.
+  execFileSync(process.execPath, [path.join(ROOT, "build", "examples.js"), "--check"], { stdio: "pipe" });
+});
+
+t("설명 글 안에 <div> 가 없다 (FAQ 구조화 데이터가 잘리지 않는다)", () => {
+  // faq.js 는 'card prose' 를 첫 </div> 까지만 읽는다. 안에 div 가 끼면
+  // 그 뒤의 질문이 구조화 데이터에서 조용히 사라진다.
+  const bad = htmls.filter((f) => {
+    const m = fs.readFileSync(f, "utf8").match(/<div class="card prose">([\s\S]*?)\n<\/div>/);
+    return m && /<div[\s>]/.test(m[1]);
+  }).map((f) => path.relative(WEB, f));
+  assert.strictEqual(bad.length, 0, `prose 안에 div: ${bad.join(", ")}`);
+});
+
+t("계산기 페이지의 설명 글이 얇지 않다", () => {
+  // 2026-10 애드센스가 '가치가 별로 없는 콘텐츠' 로 거절했다. 설명이 짧은
+  // 계산기 페이지는 흔한 계산기와 구별되지 않는다. 공백을 뺀 글자 수로 센다.
+  const PAGES = require(path.join(ROOT, "build", "pages.js"));
+  const MIN = 1300;
+  const exempt = new Set(["/salary-table/", "/insurance-rates/", "/about/", "/privacy/"]); // 표가 본문
+  const thin = PAGES.filter((p) => !exempt.has(p.url)).map((p) => {
+    const f = path.join(WEB, p.url === "/" ? "index.html" : path.join(p.url.slice(1), "index.html"));
+    const m = fs.readFileSync(f, "utf8").match(/<div class="card prose">([\s\S]*?)\n<\/div>/);
+    const n = m ? m[1].replace(/<[^>]+>/g, "").replace(/\s+/g, "").length : 0;
+    return { url: p.url, n };
+  }).filter((x) => x.n < MIN);
+  assert.strictEqual(thin.length, 0, `설명 글 ${MIN}자 미만: ${thin.map((x) => `${x.url} ${x.n}자`).join(", ")}`);
+});
+
+
 console.log(`\n  ${pass} passed, ${fail} failed\n`);
 process.exit(fail === 0 ? 0 : 1);

@@ -40,6 +40,7 @@ const STEPS = [
   ["salary-table.js", [], true],
   ["insurance-rates.js", [], true],
   ["law-refs.js", [], true],
+  ["examples.js", [], true],
   ["faq.js", [], false],
   ["adsense.js", [], true],
   ["favicon.js", [], true],
