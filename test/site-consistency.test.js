@@ -487,6 +487,18 @@ t("설명 글 안에 <div> 가 없다 (FAQ 구조화 데이터가 잘리지 않�
   assert.strictEqual(bad.length, 0, `prose 안에 div: ${bad.join(", ")}`);
 });
 
+t("계산기마다 본문 속 링크로 2곳 이상에서 연결된다 (related)", () => {
+  // 상단 메뉴 링크만 있던 /monthly-salary/ 를 서치콘솔이 '참조 페이지: 감지된
+  // 페이지 없음' 으로 보였다(2026-10). 메뉴 밖 본문 링크로도 이어져야 한다.
+  const PAGES = require(path.join(ROOT, "build", "pages.js"));
+  const calc = PAGES.filter((p) => p.related);
+  const inbound = Object.fromEntries(calc.map((p) => [p.url, new Set()]));
+  for (const p of calc) for (const u of p.related) if (inbound[u]) inbound[u].add(p.url);
+  const weak = calc.filter((p) => inbound[p.url].size < 2).map((p) => p.url);
+  assert.strictEqual(weak.length, 0, `related 로 2곳 미만에서만 연결: ${weak.join(", ")}`);
+  execFileSync(process.execPath, [path.join(ROOT, "build", "nav.js"), "--check"], { stdio: "pipe" });
+});
+
 t("계산기 페이지의 설명 글이 얇지 않다", () => {
   // 2026-10 애드센스가 '가치가 별로 없는 콘텐츠' 로 거절했다. 설명이 짧은
   // 계산기 페이지는 흔한 계산기와 구별되지 않는다. 공백을 뺀 글자 수로 센다.

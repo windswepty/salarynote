@@ -219,6 +219,15 @@ details .row { margin-top: var(--s3); }
 /* ---------- 근거 법령 ---------- */
 /* 검색어에 조문 번호까지 적어 찾는 사람이 있어 만들었다.
    계산 결과보다 약하게 두어 결과를 가리지 않게 한다. */
+/* 함께 보면 좋은 계산기: build/nav.js 가 pages.js 의 related 로 만든다 */
+.related { margin-top: var(--s6); padding-top: var(--s5); border-top: 1px solid var(--line); }
+.related h2 { font-size: 15px; font-weight: 700; color: var(--ink); margin: 0 0 var(--s3); letter-spacing: -.02em; }
+.related ul { list-style: none; padding: 0; margin: 0; }
+.related li { font-size: 14px; margin: var(--s2) 0; line-height: 1.5; word-break: keep-all; }
+.related a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.related a:hover { text-decoration: underline; }
+.related-d { color: var(--muted); font-size: 13px; }
+.related-d::before { content: "— "; }
 .lawref { margin-top: var(--s6); padding-top: var(--s5); border-top: 1px solid var(--line); }
 .lawref h2 {
   font-size: 13px; font-weight: 700; color: var(--ink);

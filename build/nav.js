@@ -35,6 +35,26 @@ function footHtml(currentUrl) {
   return `${F_OPEN}<p class="footlinks">${links.join(" · ")}</p>${F_CLOSE}`;
 }
 
+const R_OPEN = "<!--RELATED-->";
+const R_CLOSE = "<!--/RELATED-->";
+const byUrl = Object.fromEntries(PAGES.map((p) => [p.url, p]));
+
+/**
+ * 본문 아래 '함께 보면 좋은 계산기'. 상단 메뉴는 모든 페이지에 똑같이 붙는
+ * 틀이라 구글이 본문 링크만큼 무게를 두지 않는다. 실제로 메뉴 링크가 15개씩
+ * 있는데도 /monthly-salary/ 가 '참조 페이지: 감지된 페이지 없음' 이었다.
+ */
+function relatedHtml(page) {
+  const items = page.related.map((u) => {
+    const r = byUrl[u];
+    if (!r) throw new Error(`${page.url} 의 related 에 없는 페이지: ${u}`);
+    if (u === page.url) throw new Error(`${page.url} 가 자기 자신을 related 로 가리킨다`);
+    return `<li><a href="${r.url}">${r.title}</a> <span class="related-d">${r.desc}</span></li>`;
+  });
+  return `${R_OPEN}<section class="related" aria-labelledby="related-h"><h2 id="related-h">함께 보면 좋은 계산기</h2>` +
+    `<ul>${items.join("")}</ul></section>${R_CLOSE}`;
+}
+
 function navHtml(currentUrl, pad) {
   const links = items.map((p) => {
     const cur = p.url === currentUrl ? ' aria-current="page"' : "";
@@ -77,6 +97,18 @@ for (const file of walk(WEB)) {
       next = next.replace(/([ \t]*)<\/footer>/, `$1  ${foot}\n$1</footer>`);
     } else {
       noFooter.push(path.relative(WEB, file));
+    }
+  }
+
+  const page = byUrl[url];
+  if (page && page.related) {
+    const block = relatedHtml(page);
+    if (next.includes(R_OPEN)) {
+      next = next.replace(new RegExp(R_OPEN + "[\\s\\S]*?" + R_CLOSE), () => block);
+    } else if (next.includes("<!--LAWREF-->")) {
+      next = next.replace("<!--LAWREF-->", () => block + "\n<!--LAWREF-->");
+    } else {
+      noFooter.push(path.relative(WEB, file) + " (LAWREF 표식 없음)");
     }
   }
 
