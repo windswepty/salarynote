@@ -2461,7 +2461,7 @@ module.exports = { calcUnemploymentBenefit, benefitDaysTable, resolveCohort };
     rates: {
   "$comment": "샐러리노트 요율 원장. 이 파일 외의 곳에 숫자를 하드코딩하지 말 것. 자동 갱신 파이프라인이 수정하는 유일한 파일이다.",
   "year": 2026,
-  "lastVerified": "2026-10-09",
+  "lastVerified": "2026-10-16",
 
   "nationalPension": {
     "label": "국민연금",
