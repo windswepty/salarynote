@@ -262,6 +262,19 @@ details .row { margin-top: var(--s3); }
 .ex th { width: 30%; padding-right: var(--s3); vertical-align: top; }
 .ex td { font-variant-numeric: tabular-nums; color: var(--ink-2); word-break: break-word; }
 .ex th, .ex td { padding-top: 7px; padding-bottom: 7px; }
+/* 여러 열짜리 표(가이드의 연도별 추이). 좁은 화면에서는 표만 가로로 밀린다. */
+.ex-t table { display: block; overflow-x: auto; white-space: nowrap; }
+.ex-t thead th { font-weight: 600; color: var(--ink); font-size: 12.5px; padding-right: var(--s3); border-bottom: 1px solid var(--line-2); }
+.ex-t tbody th { width: auto; }
+.ex-t td { padding-right: var(--s3); text-align: right; }
+
+/* /guide/ 목록: build/nav.js 가 pages.js 의 kind: "guide" 로 만든다 */
+.guidelist { list-style: none; padding: 0; margin: var(--s2) 0 var(--s4); }
+.guidelist li { padding: var(--s3) 0; border-bottom: 1px solid var(--line); }
+.guidelist li:last-child { border-bottom: 0; }
+.guidelist a { display: block; font-size: 15px; font-weight: 700; color: var(--accent); text-decoration: none; }
+.guidelist a:hover { text-decoration: underline; }
+.guidelist-d { display: block; font-size: 13.5px; color: var(--muted); margin-top: 2px; }
 .prose .ex p.ex-r { margin: var(--s2) 0 0; font-weight: 600; color: var(--ink); }
 
 footer {

@@ -1,66 +1,86 @@
 {
  "/": {
-  "date": "2026-10-15",
-  "hash": "1dd88bee42daf14d"
+  "date": "2026-10-22",
+  "hash": "8e7147e704339c9e"
  },
  "/monthly-salary/": {
-  "date": "2026-10-15",
-  "hash": "5ca7e2f3ed948b86"
+  "date": "2026-10-22",
+  "hash": "70c7839ce4587c33"
  },
  "/four-insurance/": {
-  "date": "2026-10-15",
-  "hash": "6e8e39ba1180db4b"
+  "date": "2026-10-22",
+  "hash": "d231d4e544e807b0"
  },
  "/severance-pay/": {
-  "date": "2026-10-15",
-  "hash": "b5bd3a525eb59a63"
+  "date": "2026-10-22",
+  "hash": "dbce1e722656bdee"
  },
  "/weekly-holiday-pay/": {
-  "date": "2026-10-15",
-  "hash": "69ce65c2becfda7e"
+  "date": "2026-10-22",
+  "hash": "9c46d439a91360c4"
  },
  "/annual-leave/": {
-  "date": "2026-10-15",
-  "hash": "a234ca83bff8a0eb"
+  "date": "2026-10-22",
+  "hash": "2db26745522f4e3e"
  },
  "/wage-converter/": {
-  "date": "2026-10-15",
-  "hash": "2e30de2274811f25"
+  "date": "2026-10-22",
+  "hash": "828f952eaec78bdd"
  },
  "/overtime-pay/": {
-  "date": "2026-10-15",
-  "hash": "4c856b6702804307"
+  "date": "2026-10-22",
+  "hash": "7f0f964d06765175"
  },
  "/minimum-wage/": {
-  "date": "2026-10-15",
-  "hash": "538d6815fb920c17"
+  "date": "2026-10-22",
+  "hash": "561a6e10be3aad2c"
  },
  "/part-time/": {
-  "date": "2026-10-15",
-  "hash": "2c1a631ac7a1b1f3"
+  "date": "2026-10-22",
+  "hash": "f544c8eb9ae57daf"
  },
  "/parental-leave/": {
-  "date": "2026-10-15",
-  "hash": "cec6f1b272607eb7"
+  "date": "2026-10-22",
+  "hash": "a57b7bba8de6723c"
  },
  "/unemployment/": {
-  "date": "2026-10-15",
-  "hash": "3157b972a12d7eb4"
+  "date": "2026-10-22",
+  "hash": "a5683d5981a681c5"
  },
  "/salary-table/": {
-  "date": "2026-10-15",
-  "hash": "4593dc94290e0b6d"
+  "date": "2026-10-22",
+  "hash": "eb5d502df915df06"
  },
  "/insurance-rates/": {
-  "date": "2026-10-15",
-  "hash": "4f628a4e934f482b"
+  "date": "2026-10-22",
+  "hash": "6536f7485c720d73"
+ },
+ "/guide/": {
+  "date": "2026-10-22",
+  "hash": "b54a619244244eb4"
+ },
+ "/guide/payslip/": {
+  "date": "2026-10-22",
+  "hash": "5daf135bdb5fc21a"
+ },
+ "/guide/quitting/": {
+  "date": "2026-10-22",
+  "hash": "3eb08036459a4e8f"
+ },
+ "/guide/minimum-wage-history/": {
+  "date": "2026-10-22",
+  "hash": "851c273a3553ce71"
+ },
+ "/guide/insurance-history/": {
+  "date": "2026-10-22",
+  "hash": "7db0ae7147b3e409"
  },
  "/about/": {
-  "date": "2026-10-15",
-  "hash": "2e9eafbb297601a6"
+  "date": "2026-10-22",
+  "hash": "dcbaa46572dc7366"
  },
  "/privacy/": {
-  "date": "2026-10-07",
-  "hash": "af04697628ca5648"
+  "date": "2026-10-22",
+  "hash": "8dd2d530a1d9c677"
  }
 }

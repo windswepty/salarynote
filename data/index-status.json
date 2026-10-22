@@ -87,6 +87,31 @@
       "status": "indexed",
       "date": "2026-09-05",
       "order": 91
+    },
+    "/guide/": {
+      "status": "todo",
+      "date": null,
+      "order": 92
+    },
+    "/guide/payslip/": {
+      "status": "todo",
+      "date": null,
+      "order": 93
+    },
+    "/guide/quitting/": {
+      "status": "todo",
+      "date": null,
+      "order": 94
+    },
+    "/guide/minimum-wage-history/": {
+      "status": "todo",
+      "date": null,
+      "order": 95
+    },
+    "/guide/insurance-history/": {
+      "status": "todo",
+      "date": null,
+      "order": 96
     }
   }
 }

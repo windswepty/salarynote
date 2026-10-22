@@ -64,7 +64,9 @@ t("원장 밖에 살아있는 요율 숫자가 하드코딩돼 있지 않다", (
     // 원장에서 나온 값일 수밖에 없다. 손으로 쓴 산문만 검사 대상이다.
     s = s.replace(/<span data-rate="[^"]+"[^>]*>[\s\S]*?<\/span>/g, "")
          .replace(/<!--STAMP:footer-->[\s\S]*?<!--\/STAMP-->/g, "")
-         .replace(/<!--([A-Z]+)-->[\s\S]*?<!--\/\1-->/g, "");
+         .replace(/<!--([A-Z]+)-->[\s\S]*?<!--\/\1-->/g, "")
+         // 계산 예시·가이드 표는 build/examples.js 가 엔진·원장으로 만든다.
+         .replace(/<!--EXAMPLE:[\w-]+-->[\s\S]*?<!--\/EXAMPLE-->/g, "");
     for (const [str, label] of live) {
       // 부분 문자열로 찾으면 안 된다. 실수령액표의 '89.5%' 안에 국민연금 '9.5%' 가,
       // '81.8%' 안에 고용보험 '1.8%' 가 들어 있어 멀쩡한 페이지가 걸린다.
@@ -257,7 +259,7 @@ t("모든 계산기 페이지에 근거 법령이 있다", () => {
   const REFS = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "law-refs.json"), "utf8"));
   const PAGES = require(path.join(ROOT, "build", "pages.js"));
   // 소개·개인정보처리방침은 계산을 하지 않으므로 근거 법령이 없는 것이 맞다.
-  const exempt = new Set(["/about/", "/privacy/"]);
+  const exempt = new Set(["/about/", "/privacy/", "/guide/"]);
   const missing = PAGES.filter((p) => !exempt.has(p.url) && !REFS.pages[p.url]).map((p) => p.url);
   assert.strictEqual(missing.length, 0,
     `근거 법령이 없는 계산기 페이지: ${missing.join(", ")}`);
@@ -504,7 +506,7 @@ t("계산기 페이지의 설명 글이 얇지 않다", () => {
   // 계산기 페이지는 흔한 계산기와 구별되지 않는다. 공백을 뺀 글자 수로 센다.
   const PAGES = require(path.join(ROOT, "build", "pages.js"));
   const MIN = 1300;
-  const exempt = new Set(["/salary-table/", "/insurance-rates/", "/about/", "/privacy/"]); // 표가 본문
+  const exempt = new Set(["/salary-table/", "/insurance-rates/", "/about/", "/privacy/", "/guide/"]); // 표가 본문이거나 목록 페이지
   const thin = PAGES.filter((p) => !exempt.has(p.url)).map((p) => {
     const f = path.join(WEB, p.url === "/" ? "index.html" : path.join(p.url.slice(1), "index.html"));
     const m = fs.readFileSync(f, "utf8").match(/<div class="card prose">([\s\S]*?)\n<\/div>/);

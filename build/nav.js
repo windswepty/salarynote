@@ -23,7 +23,19 @@ const WEB = path.join(__dirname, "..", "web");
 const items = PAGES.filter((p) => p.nav);
 // 상단에 싣지 않는 페이지(소개·개인정보처리방침)는 푸터에서 받는다.
 // 여기서 빠지면 그 페이지는 사이트 안에서 도달할 수 없게 된다.
-const footItems = PAGES.filter((p) => !p.nav);
+// 가이드 글은 푸터가 아니라 /guide/ 목록과 본문 링크로 이어진다(푸터가 길어지면 아무도 안 본다).
+const footItems = PAGES.filter((p) => !p.nav && !p.kind);
+const guides = PAGES.filter((p) => p.kind === "guide");
+
+const G_OPEN = "<!--GUIDELIST-->";
+const G_CLOSE = "<!--/GUIDELIST-->";
+
+/** /guide/ 목록. 가이드를 pages.js 에 추가하면 여기에 저절로 실린다. */
+function guideListHtml() {
+  const lis = guides.map((g) =>
+    `<li><a href="${g.url}">${g.title}</a><span class="guidelist-d">${g.desc}</span></li>`);
+  return `${G_OPEN}<ul class="guidelist">${lis.join("")}</ul>${G_CLOSE}`;
+}
 
 const F_OPEN = "<!--FOOTLINKS-->";
 const F_CLOSE = "<!--/FOOTLINKS-->";
@@ -51,7 +63,9 @@ function relatedHtml(page) {
     if (u === page.url) throw new Error(`${page.url} 가 자기 자신을 related 로 가리킨다`);
     return `<li><a href="${r.url}">${r.title}</a> <span class="related-d">${r.desc}</span></li>`;
   });
-  return `${R_OPEN}<section class="related" aria-labelledby="related-h"><h2 id="related-h">함께 보면 좋은 계산기</h2>` +
+  const hasGuide = page.related.some((u) => byUrl[u].kind === "guide");
+  const heading = hasGuide ? "함께 보면 좋은 계산기와 가이드" : "함께 보면 좋은 계산기";
+  return `${R_OPEN}<section class="related" aria-labelledby="related-h"><h2 id="related-h">${heading}</h2>` +
     `<ul>${items.join("")}</ul></section>${R_CLOSE}`;
 }
 
@@ -101,6 +115,10 @@ for (const file of walk(WEB)) {
   }
 
   const page = byUrl[url];
+  if (page && page.kind === "hub") {
+    if (!next.includes(G_OPEN)) noFooter.push(path.relative(WEB, file) + " (GUIDELIST 표식 없음)");
+    else next = next.replace(new RegExp(G_OPEN + "[\\s\\S]*?" + G_CLOSE), () => guideListHtml());
+  }
   if (page && page.related) {
     const block = relatedHtml(page);
     if (next.includes(R_OPEN)) {

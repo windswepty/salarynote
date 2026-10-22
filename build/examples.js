@@ -41,6 +41,7 @@ const { calcParentalLeave } = E("parental-leave");
 
 const won = (n) => Math.round(n).toLocaleString("ko-KR") + "원";
 const esc = (s) => String(s).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+const HISTORY = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "rates-history.json"), "utf8"));
 const MIN = rates.minimumWage.hourly;
 const Y = rates.year;
 
@@ -245,6 +246,61 @@ const EXAMPLES = {
     { annualSalary: 40_000_000 }, "연봉을 12로 나눠 매달 받는 계약입니다."),
   "np-monthly-300": () => netPayExample("monthly-salary", "월급 300만원",
     { monthlySalary: 3_000_000 }, "세전 월급 300만원 중 식대 20만원이 비과세입니다."),
+
+  /* ── 가이드 ─────────────────────────────────────────────── */
+  "gd-payslip": () => netPayExample("guide/payslip", "월급 350만원의 명세서",
+    { monthlySalary: 3_500_000 }, "기본급 330만원에 식대 20만원을 받는 직장인입니다."),
+
+  "gd-mw-history": () => {
+    const h = HISTORY.minimumWageHourly;
+    const years = Object.keys(h).filter((y) => /^\d{4}$/.test(y) && +y <= Y).sort();
+    return {
+      page: "guide/minimum-wage-history",
+      title: `연도별 최저임금 (${years[0]}~${Y})`,
+      head: ["연도", "시급", "전년 대비", "월 환산(209시간)"],
+      lead: "고용노동부 고시 기준입니다. 월 환산액은 시급에 주 40시간 근무자의 월 소정근로시간 209시간을 곱한 값입니다.",
+      rows: years.map((y, i) => {
+        const prev = i ? h[years[i - 1]] : null;
+        const up = prev ? `${((h[y] / prev - 1) * 100).toFixed(2)}%` : "—";
+        return [`${y}년`, won(h[y]), up, won(h[y] * 209)];
+      }),
+      result: `${years[0]}년 ${won(h[years[0]])}에서 ${Y}년 ${won(h[Y])}으로 ` +
+        `${(h[Y] / h[years[0]]).toFixed(2)}배가 됐습니다.`,
+    };
+  },
+
+  "gd-ins-history": () => {
+    const H = HISTORY;
+    const years = Object.keys(H.healthInsuranceTotalRate).filter((y) => +y >= 2018 && +y <= Y).sort();
+    const pct = (v) => (v == null ? "—" : `${+(v * 100).toFixed(4)}%`);
+    return {
+      page: "guide/insurance-history",
+      title: `4대보험 요율 변화 (${years[0]}~${Y})`,
+      head: ["연도", "건강보험", "장기요양(건보료 대비)", "고용보험(실업급여)"],
+      lead: "근로자와 사업주가 함께 내는 전체 요율입니다. 근로자는 각각 절반을 냅니다.",
+      rows: years.map((y) => [`${y}년`, pct(H.healthInsuranceTotalRate[y]),
+        pct(H.longTermCareRateOfHealthPremium[y]), pct(H.employmentUnemploymentTotalRate[y])]),
+      result: "고용보험 요율은 1월이 아니라 2019년 10월 1일과 2022년 7월 1일에 올랐습니다. 표는 그해 연말 기준입니다.",
+    };
+  },
+
+  "gd-pension-schedule": () => {
+    // 국민연금법 부칙 제4조제1항: 사업장가입자 기여금·사용자 부담금 각각의 비율(1만분의 N).
+    // 2033년부터는 본문 제88조의 1천분의 65(각각)로 합계 13%다. 2026-10-22 법제처 원문 확인.
+    const HALF = { 2026: 475, 2027: 500, 2028: 525, 2029: 550, 2030: 575, 2031: 600, 2032: 625, 2033: 650 };
+    if (HALF[Y] && HALF[Y] * 2 / 10000 !== rates.nationalPension.totalRate) {
+      throw new Error(`국민연금 일정표 ${Y}년 ${HALF[Y] * 2 / 100}% 가 원장 ${rates.nationalPension.totalRate} 와 다릅니다.`);
+    }
+    return {
+      page: "guide/insurance-history",
+      title: "국민연금 보험료율 인상 일정",
+      head: ["연도", "전체 요율", "근로자 부담", "300만원 기준"],
+      lead: "2025년 국민연금법 개정으로 정해진 사업장가입자 요율입니다. 근로자와 회사가 절반씩 내며, 마지막 열은 월 보수 300만원인 근로자가 내는 금액입니다.",
+      rows: Object.entries(HALF).map(([y, half]) => [
+        +y === 2033 ? "2033년 이후" : `${y}년`, `${(half * 2) / 100}%`, `${half / 100}%`, won(3_000_000 * half / 10000)]),
+      result: "2033년에 13%가 되면 그 뒤로는 법이 다시 바뀌지 않는 한 그대로입니다. 월 300만원 기준 근로자 몫은 2026년보다 52,500원 늘어납니다.",
+    };
+  },
 };
 
 function netPayExample(page, title, input, lead) {
@@ -270,9 +326,15 @@ function netPayExample(page, title, input, lead) {
 }
 
 function render(id, ex) {
-  const rows = ex.rows.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join("");
-  return `<!--EXAMPLE:${id}--><figure class="ex"><figcaption>예시 · ${esc(ex.title)}</figcaption>` +
-    `<p>${esc(ex.lead)}</p><table><tbody>${rows}</tbody></table>` +
+  // head 가 있으면 여러 열짜리 표다(가이드의 연도별 추이 등). 없으면 [항목, 계산] 두 열.
+  const body = ex.head
+    ? `<thead><tr>${ex.head.map((h) => `<th scope="col">${esc(h)}</th>`).join("")}</tr></thead><tbody>` +
+      ex.rows.map((r) => `<tr><th>${esc(r[0])}</th>${r.slice(1).map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("") +
+      `</tbody>`
+    : `<tbody>${ex.rows.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join("")}</tbody>`;
+  const cls = ex.head ? "ex ex-t" : "ex";
+  return `<!--EXAMPLE:${id}--><figure class="${cls}"><figcaption>${ex.head ? "표" : "예시"} · ${esc(ex.title)}</figcaption>` +
+    `<p>${esc(ex.lead)}</p><table>${body}</table>` +
     `<p class="ex-r">${esc(ex.result)}</p></figure><!--/EXAMPLE-->`;
 }
 
