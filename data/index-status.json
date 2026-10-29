@@ -89,8 +89,8 @@
       "order": 91
     },
     "/guide/": {
-      "status": "requested",
-      "date": "2026-10-22",
+      "status": "indexed",
+      "date": "2026-10-29",
       "order": 92
     },
     "/guide/payslip/": {
@@ -99,18 +99,18 @@
       "order": 93
     },
     "/guide/quitting/": {
-      "status": "requested",
-      "date": "2026-10-22",
+      "status": "indexed",
+      "date": "2026-10-29",
       "order": 94
     },
     "/guide/minimum-wage-history/": {
-      "status": "requested",
-      "date": "2026-10-22",
+      "status": "indexed",
+      "date": "2026-10-29",
       "order": 95
     },
     "/guide/insurance-history/": {
-      "status": "requested",
-      "date": "2026-10-22",
+      "status": "indexed",
+      "date": "2026-10-29",
       "order": 96
     }
   }
