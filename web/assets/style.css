@@ -267,6 +267,10 @@ details .row { margin-top: var(--s3); }
 .ex-t thead th { font-weight: 600; color: var(--ink); font-size: 12.5px; padding-right: var(--s3); border-bottom: 1px solid var(--line-2); }
 .ex-t tbody th { width: auto; }
 .ex-t td { padding-right: var(--s3); text-align: right; }
+/* 마지막 열이 설명 글인 표(임금명세서 예시): 줄바꿈을 허용하고 왼쪽 정렬 */
+.ex-tl table { display: table; white-space: normal; }
+.ex-tl th, .ex-tl td { white-space: nowrap; }
+.ex-tl td:last-child { white-space: normal; text-align: left; font-size: 12px; color: var(--muted); word-break: keep-all; overflow-wrap: anywhere; min-width: 9em; }
 
 /* /guide/ 목록: build/nav.js 가 pages.js 의 kind: "guide" 로 만든다 */
 .guidelist { list-style: none; padding: 0; margin: var(--s2) 0 var(--s4); }

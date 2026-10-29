@@ -248,8 +248,41 @@ const EXAMPLES = {
     { monthlySalary: 3_000_000 }, "세전 월급 300만원 중 식대 20만원이 비과세입니다."),
 
   /* ── 가이드 ─────────────────────────────────────────────── */
-  "gd-payslip": () => netPayExample("guide/payslip", "월급 350만원의 명세서",
-    { monthlySalary: 3_500_000 }, "기본급 330만원에 식대 20만원을 받는 직장인입니다."),
+  "gd-payslip": () => {
+    // 임금명세서 법정 기재사항(근로기준법 시행령 제27조의2)을 모두 갖춘 명세서 모양.
+    // 계산기 페이지의 '실수령액 예시' 와 겹치지 않게, 항목별 금액과 계산 방법(⑤)을 함께 적는다.
+    const BASE = 2_800_000, DUTY = 200_000, MEAL = 200_000, OT_H = 8;
+    const ordinaryMonthly = BASE + DUTY;
+    const ot = calcOvertimePay({ employees: 10, monthlyOrdinaryWage: ordinaryMonthly, overtimeHours: OT_H }, rates);
+    const gross = BASE + DUTY + MEAL + ot.overtimePay;
+    const r = calcNetPay({ monthlySalary: gross, nonTaxable: MEAL, dependents: 1, payDate: PAY_DATE }, rates, taxTable);
+    const d = r.insurance.detail;
+    const taxLine = (r.basis.find((b) => b.startsWith("소득세:")) || "").replace(/^소득세:\s*/, "");
+    return {
+      page: "guide/payslip",
+      title: "법정 기재사항을 모두 갖춘 임금명세서",
+      head: ["항목", "금액", "계산 방법"], textCol: true,
+      lead: `직원 10명 회사, 주 40시간 근무, 부양가족 본인 1명, ${Y}년 요율과 간이세액표 기준입니다. ` +
+        "이름·생년월일(①)과 지급일(②)은 표에서 생략했습니다.",
+      rows: [
+        ["기본급", won(BASE), "월 고정"],
+        ["직책수당", won(DUTY), "월 고정 (통상임금에 포함)"],
+        ["연장근로수당", won(ot.overtimePay),
+          `${OT_H}시간 × 통상시급 ${won(ot.hourlyOrdinaryWage)} × 1.5 (통상시급 = ${won(ordinaryMonthly)} ÷ 209시간)`],
+        ["식대", won(MEAL), "월 고정, 월 20만원까지 비과세"],
+        ["임금 총액", won(gross), "지급 항목 합계"],
+        ["국민연금", won(d.pension.amount), d.pension.basis["산식"]],
+        ["건강보험", won(d.health.amount), d.health.basis["산식"]],
+        ["장기요양", won(d.care.amount), d.care.basis["산식"]],
+        ["고용보험", won(d.employment.amount), d.employment.basis["산식"]],
+        ["소득세", won(r.incomeTax), taxLine],
+        ["지방소득세", won(r.localIncomeTax), "소득세의 10% (10원 미만 버림)"],
+        ["공제 총액", won(r.totalDeduction), "공제 항목 합계"],
+        ["실지급액", won(r.netPay), "임금 총액 − 공제 총액"],
+      ],
+      result: "③ 임금 총액, ④ 항목별 금액, ⑤ 연장근로 시간과 계산 방법, ⑥ 공제 항목별 금액과 총액이 모두 보여야 법정 기재사항을 갖춘 명세서입니다.",
+    };
+  },
 
   "gd-mw-history": () => {
     const h = HISTORY.minimumWageHourly;
@@ -332,7 +365,7 @@ function render(id, ex) {
       ex.rows.map((r) => `<tr><th>${esc(r[0])}</th>${r.slice(1).map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("") +
       `</tbody>`
     : `<tbody>${ex.rows.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join("")}</tbody>`;
-  const cls = ex.head ? "ex ex-t" : "ex";
+  const cls = ex.head ? (ex.textCol ? "ex ex-t ex-tl" : "ex ex-t") : "ex";
   return `<!--EXAMPLE:${id}--><figure class="${cls}"><figcaption>${ex.head ? "표" : "예시"} · ${esc(ex.title)}</figcaption>` +
     `<p>${esc(ex.lead)}</p><table>${body}</table>` +
     `<p class="ex-r">${esc(ex.result)}</p></figure><!--/EXAMPLE-->`;
